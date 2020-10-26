@@ -54,6 +54,7 @@ const moveFiles = (fromPath: string, toPath: string) => {
 const moveStaticFiles = async (packageRoot: string, pkg: any) => {
   if (pkg.name.endsWith('/ui')) {
     return useSpinner('Moving static files', async () => {
+      packageRoot = packageRoot.replace(/\\/g, '/');
       const staticFiles = await globby(`${packageRoot}/src/**/*.{png,svg,gif,jpg}`);
       const pathSearch = new RegExp(`^${packageRoot}/src`);
       const pathReplace = `${packageRoot}/compiled`;
