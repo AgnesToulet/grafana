@@ -181,7 +181,7 @@ func (hs *HTTPServer) OAuthLogin(ctx *models.ReqContext) {
 	}
 
 	// login
-	if err := hs.loginUserWithUser(loginInfo.User, ctx); err != nil {
+	if err := hs.loginUserWithUser(loginInfo.User, ctx, -1); err != nil {
 		hs.handleOAuthLoginErrorWithRedirect(ctx, loginInfo, err)
 		return
 	}

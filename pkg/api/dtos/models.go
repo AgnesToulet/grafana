@@ -19,9 +19,10 @@ type AnyId struct {
 }
 
 type LoginCommand struct {
-	User     string `json:"user" binding:"Required"`
-	Password string `json:"password" binding:"Required"`
-	Remember bool   `json:"remember"`
+	User              string `json:"user" binding:"Required"`
+	Password          string `json:"password" binding:"Required"`
+	Remember          bool   `json:"remember"`
+	ConcurrentTokenID int64  `json:"tokenId"`
 }
 
 type CurrentUser struct {

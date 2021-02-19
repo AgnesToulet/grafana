@@ -16,6 +16,7 @@ type CreateTokenErr struct {
 	StatusCode  int
 	InternalErr error
 	ExternalErr string
+	UserTokens  []*UserToken
 }
 
 func (e *CreateTokenErr) Error() string {

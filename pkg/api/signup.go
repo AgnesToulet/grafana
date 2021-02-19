@@ -118,7 +118,7 @@ func (hs *HTTPServer) SignUpStep2(c *models.ReqContext, form dtos.SignUpStep2For
 		apiResponse["code"] = "redirect-to-select-org"
 	}
 
-	err := hs.loginUserWithUser(user, c)
+	err := hs.loginUserWithUser(user, c, -1)
 	if err != nil {
 		return response.Error(500, "failed to login user", err)
 	}

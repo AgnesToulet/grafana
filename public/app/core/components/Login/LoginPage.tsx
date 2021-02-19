@@ -35,6 +35,7 @@ export const LoginPage: FC = () => {
           changePassword,
           skipPasswordChange,
           isChangingPassword,
+          sessions,
         }) => (
           <>
             {!isChangingPassword && (
@@ -46,6 +47,7 @@ export const LoginPage: FC = () => {
                       loginHint={loginHint}
                       passwordHint={passwordHint}
                       isLoggingIn={isLoggingIn}
+                      sessions={sessions}
                     >
                       {!(ldapEnabled || authProxyEnabled) ? (
                         <HorizontalGroup justify="flex-end">

@@ -25,6 +25,7 @@ import (
 const (
 	viewIndex            = "index"
 	loginErrorCookieName = "login_error"
+	loginUserID          = "login_user_id"
 )
 
 var setIndexViewData = (*HTTPServer).setIndexViewData
@@ -105,6 +106,13 @@ func (hs *HTTPServer) LoginView(c *models.ReqContext) {
 		// to login again via OAuth and enter to a redirect loop
 		cookies.DeleteCookie(c.Resp, loginErrorCookieName, hs.CookieOptionsFromCfg)
 		viewData.Settings["loginError"] = loginError
+
+		if loginError == "You can't login on the same account from more than 3 different devices" {
+			userTokens, err := hs.AuthTokenService.GetUserTokens(ctx, user.Id)
+			if err != nil {
+				return err
+			}
+		}
 		c.HTML(200, getViewIndex(), viewData)
 		return
 	}
@@ -117,7 +125,7 @@ func (hs *HTTPServer) LoginView(c *models.ReqContext) {
 		// Assign login token to auth proxy users if enable_login_token = true
 		if hs.Cfg.AuthProxyEnabled && hs.Cfg.AuthProxyEnableLoginToken {
 			user := &models.User{Id: c.SignedInUser.UserId, Email: c.SignedInUser.Email, Login: c.SignedInUser.Login}
-			err := hs.loginUserWithUser(user, c)
+			err := hs.loginUserWithUser(user, c, -1)
 			if err != nil {
 				c.Handle(hs.Cfg, 500, "Failed to sign in user", err)
 				return
@@ -223,11 +231,15 @@ func (hs *HTTPServer) LoginPost(c *models.ReqContext, cmd dtos.LoginCommand) res
 
 	user = authQuery.User
 
-	err = hs.loginUserWithUser(user, c)
+	err = hs.loginUserWithUser(user, c, cmd.ConcurrentTokenID)
 	if err != nil {
 		var createTokenErr *models.CreateTokenErr
 		if errors.As(err, &createTokenErr) {
-			resp = response.Error(createTokenErr.StatusCode, createTokenErr.ExternalErr, createTokenErr.InternalErr)
+			resp = response.JSON(createTokenErr.StatusCode, util.DynMap{
+				"message": createTokenErr.ExternalErr,
+				"error":   createTokenErr.InternalErr.Error(),
+				"tokens":  userTokensToDTO(createTokenErr.UserTokens, nil),
+			})
 		} else {
 			resp = response.Error(http.StatusInternalServerError, "Error while signing in user", err)
 		}
@@ -252,7 +264,7 @@ func (hs *HTTPServer) LoginPost(c *models.ReqContext, cmd dtos.LoginCommand) res
 	return resp
 }
 
-func (hs *HTTPServer) loginUserWithUser(user *models.User, c *models.ReqContext) error {
+func (hs *HTTPServer) loginUserWithUser(user *models.User, c *models.ReqContext, concurrentSessionTokenID int64) error {
 	if user == nil {
 		return errors.New("could not login user")
 	}
@@ -265,7 +277,10 @@ func (hs *HTTPServer) loginUserWithUser(user *models.User, c *models.ReqContext)
 	}
 
 	hs.log.Debug("Got IP address from client address", "addr", addr, "ip", ip)
-	ctx := context.WithValue(c.Req.Context(), models.RequestURIKey{}, c.Req.RequestURI)
+	ctx := context.WithValue(c.Req.Context(), models.LoginCtxInfoKey{}, models.LoginCtxInfo{
+		RequestURI:        c.Req.RequestURI,
+		ConcurrentTokenID: concurrentSessionTokenID,
+	})
 	userToken, err := hs.AuthTokenService.CreateToken(ctx, user, ip, c.Req.UserAgent())
 	if err != nil {
 		return errutil.Wrap("failed to create auth token", err)

@@ -207,7 +207,7 @@ func (hs *HTTPServer) CompleteInvite(c *models.ReqContext, completeInvite dtos.C
 		return rsp
 	}
 
-	err := hs.loginUserWithUser(user, c)
+	err := hs.loginUserWithUser(user, c, -1)
 	if err != nil {
 		return response.Error(500, "failed to accept invite", err)
 	}

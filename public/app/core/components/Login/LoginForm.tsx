@@ -1,9 +1,11 @@
 import React, { FC, ReactElement } from 'react';
 import { selectors } from '@grafana/e2e-selectors';
 
+import UserSessionsModal from './UserSessionsModal';
 import { FormModel } from './LoginCtrl';
 import { Button, Form, Input, Field } from '@grafana/ui';
 import { css } from 'emotion';
+import { UserSession } from 'app/types';
 
 interface Props {
   children: ReactElement;
@@ -11,6 +13,7 @@ interface Props {
   isLoggingIn: boolean;
   passwordHint: string;
   loginHint: string;
+  sessions: UserSession[];
 }
 
 const wrapperStyles = css`
@@ -23,11 +26,11 @@ export const submitButton = css`
   width: 100%;
 `;
 
-export const LoginForm: FC<Props> = ({ children, onSubmit, isLoggingIn, passwordHint, loginHint }) => {
+export const LoginForm: FC<Props> = ({ children, onSubmit, isLoggingIn, passwordHint, loginHint, sessions }) => {
   return (
     <div className={wrapperStyles}>
       <Form onSubmit={onSubmit} validateOn="onChange">
-        {({ register, errors }) => (
+        {({ register, errors, getValues }) => (
           <>
             <Field label="Email or username" invalid={!!errors.user} error={errors.user?.message}>
               <Input
@@ -52,6 +55,9 @@ export const LoginForm: FC<Props> = ({ children, onSubmit, isLoggingIn, password
               {isLoggingIn ? 'Logging in...' : 'Log in'}
             </Button>
             {children}
+            {sessions.length > 0 && (
+              <UserSessionsModal sessions={sessions} login={onSubmit} formData={getValues({ nest: true })} />
+            )}
           </>
         )}
       </Form>

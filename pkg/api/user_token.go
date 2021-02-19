@@ -43,25 +43,11 @@ func (hs *HTTPServer) logoutUserFromAllDevicesInternal(ctx context.Context, user
 	})
 }
 
-func (hs *HTTPServer) getUserAuthTokensInternal(c *models.ReqContext, userID int64) response.Response {
-	userQuery := models.GetUserByIdQuery{Id: userID}
-
-	if err := bus.Dispatch(&userQuery); err != nil {
-		if errors.Is(err, models.ErrUserNotFound) {
-			return response.Error(404, "User not found", err)
-		}
-		return response.Error(500, "Failed to get user", err)
-	}
-
-	tokens, err := hs.AuthTokenService.GetUserTokens(c.Req.Context(), userID)
-	if err != nil {
-		return response.Error(500, "Failed to get user auth tokens", err)
-	}
-
+func userTokensToDTO(tokens []*models.UserToken, c *models.ReqContext) []*dtos.UserToken {
 	result := []*dtos.UserToken{}
 	for _, token := range tokens {
 		isActive := false
-		if c.UserToken != nil && c.UserToken.Id == token.Id {
+		if c != nil && c.UserToken != nil && c.UserToken.Id == token.Id {
 			isActive = true
 		}
 
@@ -106,8 +92,25 @@ func (hs *HTTPServer) getUserAuthTokensInternal(c *models.ReqContext, userID int
 			SeenAt:                 seenAt,
 		})
 	}
+	return result
+}
 
-	return response.JSON(200, result)
+func (hs *HTTPServer) getUserAuthTokensInternal(c *models.ReqContext, userID int64) response.Response {
+	userQuery := models.GetUserByIdQuery{Id: userID}
+
+	if err := bus.Dispatch(&userQuery); err != nil {
+		if errors.Is(err, models.ErrUserNotFound) {
+			return response.Error(404, "User not found", err)
+		}
+		return response.Error(500, "Failed to get user", err)
+	}
+
+	tokens, err := hs.AuthTokenService.GetUserTokens(c.Req.Context(), userID)
+	if err != nil {
+		return response.Error(500, "Failed to get user auth tokens", err)
+	}
+
+	return response.JSON(200, userTokensToDTO(tokens, c))
 }
 
 func (hs *HTTPServer) revokeUserAuthTokenInternal(c *models.ReqContext, userID int64, cmd models.RevokeAuthTokenCmd) response.Response {

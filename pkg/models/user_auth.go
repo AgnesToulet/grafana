@@ -46,9 +46,13 @@ type LoginInfo struct {
 	Error         error
 }
 
-// RequestURIKey is used as key to save request URI in contexts
-// (used for the Enterprise auditing feature)
-type RequestURIKey struct{}
+// LoginCtxInfoKey is used as key to save login information in contexts
+// (used for the Enterprise features)
+type LoginCtxInfoKey struct{}
+type LoginCtxInfo struct {
+	RequestURI        string
+	ConcurrentTokenID int64
+}
 
 // ---------------------
 // COMMANDS
