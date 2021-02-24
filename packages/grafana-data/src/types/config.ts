@@ -114,6 +114,8 @@ export interface GrafanaConfig {
   loginHint: any;
   passwordHint: any;
   loginError: any;
+  concurrentSessions: any;
+  oauthName: string;
   navTree: any;
   viewersCanEdit: boolean;
   editorsCanAdmin: boolean;

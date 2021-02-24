@@ -28,6 +28,7 @@ interface Props {
     isChangingPassword: boolean;
     skipPasswordChange: Function;
     login: (data: FormModel) => void;
+    oauthLogin: (oauthName: string, sessionId?: number) => void;
     disableLoginForm: boolean;
     ldapEnabled: boolean;
     authProxyEnabled: boolean;
@@ -36,6 +37,7 @@ interface Props {
     loginHint: string;
     passwordHint: string;
     sessions: UserSession[];
+    oauthName: string;
   }) => JSX.Element;
 }
 
@@ -43,21 +45,34 @@ interface State {
   isLoggingIn: boolean;
   isChangingPassword: boolean;
   sessions: UserSession[];
+  oauthName: string;
 }
 
 export class LoginCtrl extends PureComponent<Props, State> {
   result: any = {};
   constructor(props: Props) {
     super(props);
-    this.state = {
+    const state = {
       isLoggingIn: false,
       isChangingPassword: false,
       sessions: [],
+      oauthName: '',
     };
 
     if (config.loginError) {
       appEvents.emit(AppEvents.alertWarning, ['Login Failed', config.loginError]);
+
+      if (config.concurrentSessions?.length > 0) {
+        console.log('sessions: ', config.concurrentSessions);
+        state.sessions = config.concurrentSessions;
+      }
+
+      if (config.oauthName) {
+        state.oauthName = config.oauthName;
+      }
     }
+
+    this.state = state;
   }
 
   changePassword = (password: string) => {
@@ -86,6 +101,19 @@ export class LoginCtrl extends PureComponent<Props, State> {
       .then(() => {
         this.toGrafana();
       });
+  };
+
+  oauthLogin = (oauthName: string, sessionId?: number) => {
+    this.setState({
+      oauthName: oauthName,
+    });
+
+    let redirectUrl = config.appSubUrl + '/login/' + oauthName;
+    if (sessionId) {
+      redirectUrl += '?sessionId=' + sessionId;
+    }
+
+    window.location.href = redirectUrl;
   };
 
   login = (formModel: FormModel) => {
@@ -140,8 +168,8 @@ export class LoginCtrl extends PureComponent<Props, State> {
 
   render() {
     const { children } = this.props;
-    const { isLoggingIn, isChangingPassword, sessions } = this.state;
-    const { login, toGrafana, changePassword } = this;
+    const { isLoggingIn, isChangingPassword, sessions, oauthName } = this.state;
+    const { login, oauthLogin, toGrafana, changePassword } = this;
     const { loginHint, passwordHint, disableLoginForm, ldapEnabled, authProxyEnabled, disableUserSignUp } = config;
 
     return (
@@ -155,11 +183,13 @@ export class LoginCtrl extends PureComponent<Props, State> {
           authProxyEnabled,
           disableUserSignUp,
           login,
+          oauthLogin,
           isLoggingIn,
           changePassword,
           skipPasswordChange: toGrafana,
           isChangingPassword,
           sessions,
+          oauthName,
         })}
       </>
     );

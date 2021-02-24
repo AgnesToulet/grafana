@@ -5,15 +5,22 @@ import { FormModel } from './LoginCtrl';
 
 export interface Props {
   sessions: UserSession[];
+  oauthName: string;
   login: (data: FormModel) => void;
+  oauthLogin: (oauthName: string, sessionId?: number) => void;
   formData: FormModel;
 }
 
 export class UserSessionsModal extends PureComponent<Props> {
   login(sessionId: number) {
-    const { formData, login } = this.props;
-    formData.tokenId = sessionId;
-    login(formData);
+    const { formData, oauthName, login, oauthLogin } = this.props;
+
+    if (!oauthName) {
+      formData.tokenId = sessionId;
+      login(formData);
+    } else {
+      oauthLogin(oauthName, sessionId);
+    }
   }
 
   render() {

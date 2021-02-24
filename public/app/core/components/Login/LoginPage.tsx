@@ -31,11 +31,13 @@ export const LoginPage: FC = () => {
           disableLoginForm,
           disableUserSignUp,
           login,
+          oauthLogin,
           isLoggingIn,
           changePassword,
           skipPasswordChange,
           isChangingPassword,
           sessions,
+          oauthName,
         }) => (
           <>
             {!isChangingPassword && (
@@ -44,10 +46,12 @@ export const LoginPage: FC = () => {
                   <>
                     <LoginForm
                       onSubmit={login}
+                      oauthLogin={oauthLogin}
                       loginHint={loginHint}
                       passwordHint={passwordHint}
                       isLoggingIn={isLoggingIn}
                       sessions={sessions}
+                      oauthName={oauthName}
                     >
                       {!(ldapEnabled || authProxyEnabled) ? (
                         <HorizontalGroup justify="flex-end">
@@ -65,7 +69,7 @@ export const LoginPage: FC = () => {
                     </LoginForm>
                   </>
                 )}
-                <LoginServiceButtons />
+                <LoginServiceButtons login={oauthLogin} />
                 {!disableUserSignUp && <UserSignup />}
               </InnerBox>
             )}

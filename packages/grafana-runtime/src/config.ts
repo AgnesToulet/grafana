@@ -45,6 +45,8 @@ export class GrafanaBootConfig implements GrafanaConfig {
   loginHint: any;
   passwordHint: any;
   loginError: any;
+  concurrentSessions: any;
+  oauthName: string;
   navTree: any;
   viewersCanEdit = false;
   editorsCanAdmin = false;

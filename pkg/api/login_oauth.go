@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"golang.org/x/oauth2"
 
@@ -66,6 +67,14 @@ func (hs *HTTPServer) OAuthLogin(ctx *models.ReqContext) {
 		oauthLogger.Error("failed to login ", "error", errorParam, "errorDesc", errorDesc)
 		hs.handleOAuthLoginErrorWithRedirect(ctx, loginInfo, login.ErrProviderDeniedRequest, "error", errorParam, "errorDesc", errorDesc)
 		return
+	}
+
+	sessionId := ctx.Query("sessionId")
+	fmt.Println("sessionId", sessionId)
+	if sessionId != "" {
+		if err := hs.trySetEncryptedCookie(ctx, "sessionId", sessionId, 60); err != nil {
+			oauthLogger.Error("Failed to set encrypted cookie for session ID", "err", err)
+		}
 	}
 
 	code := ctx.Query("code")
@@ -181,7 +190,12 @@ func (hs *HTTPServer) OAuthLogin(ctx *models.ReqContext) {
 	}
 
 	// login
-	if err := hs.loginUserWithUser(loginInfo.User, ctx, -1); err != nil {
+	concurrentSessionTokenID := int64(-1)
+	if sessionId, ok := tryGetEncryptedCookie(ctx, "sessionId"); ok && sessionId != "" {
+		concurrentSessionTokenID, _ = strconv.ParseInt(sessionId, 10, 64)
+	}
+	if err := hs.loginUserWithUser(loginInfo.User, ctx, concurrentSessionTokenID); err != nil {
+		ctx.UserId = loginInfo.User.Id
 		hs.handleOAuthLoginErrorWithRedirect(ctx, loginInfo, err)
 		return
 	}

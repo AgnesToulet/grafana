@@ -10,10 +10,12 @@ import { UserSession } from 'app/types';
 interface Props {
   children: ReactElement;
   onSubmit: (data: FormModel) => void;
+  oauthLogin: (oauthName: string, sessionId?: number) => void;
   isLoggingIn: boolean;
   passwordHint: string;
   loginHint: string;
   sessions: UserSession[];
+  oauthName: string;
 }
 
 const wrapperStyles = css`
@@ -26,7 +28,16 @@ export const submitButton = css`
   width: 100%;
 `;
 
-export const LoginForm: FC<Props> = ({ children, onSubmit, isLoggingIn, passwordHint, loginHint, sessions }) => {
+export const LoginForm: FC<Props> = ({
+  children,
+  onSubmit,
+  oauthLogin,
+  isLoggingIn,
+  passwordHint,
+  loginHint,
+  sessions,
+  oauthName,
+}) => {
   return (
     <div className={wrapperStyles}>
       <Form onSubmit={onSubmit} validateOn="onChange">
@@ -56,7 +67,13 @@ export const LoginForm: FC<Props> = ({ children, onSubmit, isLoggingIn, password
             </Button>
             {children}
             {sessions.length > 0 && (
-              <UserSessionsModal sessions={sessions} login={onSubmit} formData={getValues({ nest: true })} />
+              <UserSessionsModal
+                sessions={sessions}
+                oauthName={oauthName}
+                oauthLogin={oauthLogin}
+                login={onSubmit}
+                formData={getValues({ nest: true })}
+              />
             )}
           </>
         )}

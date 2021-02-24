@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/grafana/grafana/pkg/api/dtos"
@@ -26,6 +27,7 @@ const (
 	viewIndex            = "index"
 	loginErrorCookieName = "login_error"
 	loginUserID          = "login_user_id"
+	loginOauthName       = "login_oauth_name"
 )
 
 var setIndexViewData = (*HTTPServer).setIndexViewData
@@ -108,9 +110,20 @@ func (hs *HTTPServer) LoginView(c *models.ReqContext) {
 		viewData.Settings["loginError"] = loginError
 
 		if loginError == "You can't login on the same account from more than 3 different devices" {
-			userTokens, err := hs.AuthTokenService.GetUserTokens(ctx, user.Id)
-			if err != nil {
-				return err
+			if loginUserID, ok := tryGetEncryptedCookie(c, loginUserID); ok {
+				userID, _ := strconv.ParseInt(loginUserID, 10, 64)
+				userTokens, err := hs.AuthTokenService.GetUserTokens(context.Background(), userID)
+				if err != nil {
+					c.HTML(200, getViewIndex(), viewData)
+					return
+				}
+				cookies.DeleteCookie(c.Resp, loginUserID, hs.CookieOptionsFromCfg)
+				viewData.Settings["concurrentSessions"] = userTokensToDTO(userTokens, nil)
+			}
+
+			if oauthName, ok := tryGetEncryptedCookie(c, loginOauthName); ok {
+				cookies.DeleteCookie(c.Resp, loginOauthName, hs.CookieOptionsFromCfg)
+				viewData.Settings["oauthName"] = oauthName
 			}
 		}
 		c.HTML(200, getViewIndex(), viewData)
@@ -342,7 +355,20 @@ func (hs *HTTPServer) trySetEncryptedCookie(ctx *models.ReqContext, cookieName s
 func (hs *HTTPServer) redirectWithError(ctx *models.ReqContext, err error, v ...interface{}) {
 	ctx.Logger.Error(err.Error(), v...)
 	if err := hs.trySetEncryptedCookie(ctx, loginErrorCookieName, getLoginExternalError(err), 60); err != nil {
-		hs.log.Error("Failed to set encrypted cookie", "err", err)
+		hs.log.Error("Failed to set encrypted cookie for login error", "err", err)
+	}
+
+	// TODO: save these info only for CreateTokenErr
+	if ctx.UserId > 0 {
+		if err := hs.trySetEncryptedCookie(ctx, loginUserID, strconv.FormatInt(ctx.UserId, 10), 60); err != nil {
+			hs.log.Error("Failed to set encrypted cookie for login user id", "err", err)
+		}
+	}
+
+	if name := ctx.Params(":name"); name != "" {
+		if err := hs.trySetEncryptedCookie(ctx, loginOauthName, name, 60); err != nil {
+			hs.log.Error("Failed to set encrypted cookie for oauth login name", "err", err)
+		}
 	}
 
 	ctx.Redirect(setting.AppSubUrl + "/login")

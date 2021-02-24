@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { FC } from 'react';
 import config from 'app/core/config';
 import { css, cx } from 'emotion';
 import { useStyles } from '@grafana/ui';
@@ -114,7 +114,11 @@ const LoginDivider = () => {
   );
 };
 
-export const LoginServiceButtons = () => {
+interface Props {
+  login: (oauthName: string, sessionId?: number) => void;
+}
+
+export const LoginServiceButtons: FC<Props> = ({ login }) => {
   const styles = useStyles(getServiceStyles);
   const keyNames = Object.keys(loginServices());
   const serviceElementsEnabled = keyNames.filter((key) => {
@@ -132,7 +136,7 @@ export const LoginServiceButtons = () => {
       <a
         key={key}
         className={cx(`btn btn-medium btn-service btn-service--${service.className || key}`, styles.button)}
-        href={`login/${service.hrefName ? service.hrefName : key}`}
+        onClick={() => login(service.hrefName ? service.hrefName : key)}
         target="_self"
       >
         <i className={`btn-service-icon fa fa-${service.icon ? service.icon : key}`} />
