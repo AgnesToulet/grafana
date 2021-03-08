@@ -214,7 +214,7 @@ func (rs *RenderingService) getFilePathForNewImage() (string, error) {
 		return "", err
 	}
 
-	return pngPath + ".png", nil
+	return pngPath, nil
 }
 
 func (rs *RenderingService) getURL(path string) string {
