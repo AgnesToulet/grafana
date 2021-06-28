@@ -9,7 +9,7 @@ import (
 	plugifaces "github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
-	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+	datasources "github.com/grafana/grafana/pkg/services/provisioning/datasources/provisioner"
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
 	"github.com/grafana/grafana/pkg/services/provisioning/plugins"
 	"github.com/grafana/grafana/pkg/services/sqlstore"

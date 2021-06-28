@@ -8,23 +8,23 @@ import (
 )
 
 // ConfigVersion is used to figure out which API version a config uses.
-type configVersion struct {
+type ConfigVersion struct {
 	APIVersion int64 `json:"apiVersion" yaml:"apiVersion"`
 }
 
-type configs struct {
+type Configs struct {
 	APIVersion int64
 
-	Datasources       []*upsertDataSourceFromConfig
-	DeleteDatasources []*deleteDatasourceConfig
+	Datasources       []*UpsertDataSourceFromConfig
+	DeleteDatasources []*DeleteDatasourceConfig
 }
 
-type deleteDatasourceConfig struct {
+type DeleteDatasourceConfig struct {
 	OrgID int64
 	Name  string
 }
 
-type upsertDataSourceFromConfig struct {
+type UpsertDataSourceFromConfig struct {
 	OrgID   int64
 	Version int
 
@@ -46,16 +46,16 @@ type upsertDataSourceFromConfig struct {
 	UID               string
 }
 
-type configsV0 struct {
-	configVersion
+type ConfigsV0 struct {
+	ConfigVersion
 
 	Datasources       []*upsertDataSourceFromConfigV0 `json:"datasources" yaml:"datasources"`
 	DeleteDatasources []*deleteDatasourceConfigV0     `json:"delete_datasources" yaml:"delete_datasources"`
 }
 
-type configsV1 struct {
-	configVersion
-	log log.Logger
+type ConfigsV1 struct {
+	ConfigVersion
+	Log log.Logger
 
 	Datasources       []*upsertDataSourceFromConfigV1 `json:"datasources" yaml:"datasources"`
 	DeleteDatasources []*deleteDatasourceConfigV1     `json:"deleteDatasources" yaml:"deleteDatasources"`
@@ -112,8 +112,8 @@ type upsertDataSourceFromConfigV1 struct {
 	UID               values.StringValue    `json:"uid" yaml:"uid"`
 }
 
-func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *configs {
-	r := &configs{}
+func (cfg *ConfigsV1) MapToDatasourceFromConfig(apiVersion int64) *Configs {
+	r := &Configs{}
 
 	r.APIVersion = apiVersion
 
@@ -122,7 +122,7 @@ func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	}
 
 	for _, ds := range cfg.Datasources {
-		r.Datasources = append(r.Datasources, &upsertDataSourceFromConfig{
+		r.Datasources = append(r.Datasources, &UpsertDataSourceFromConfig{
 			OrgID:             ds.OrgID.Value(),
 			Name:              ds.Name.Value(),
 			Type:              ds.Type.Value(),
@@ -146,14 +146,14 @@ func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *configs {
 		// Using Raw value for the warnings here so that even if it uses env interpolation and the env var is empty
 		// it will still warn
 		if len(ds.Password.Raw) > 0 {
-			cfg.log.Warn(
+			cfg.Log.Warn(
 				"[Deprecated] the use of password field is deprecated. Please use secureJsonData.password",
 				"datasource name",
 				ds.Name.Value(),
 			)
 		}
 		if len(ds.BasicAuthPassword.Raw) > 0 {
-			cfg.log.Warn(
+			cfg.Log.Warn(
 				"[Deprecated] the use of basicAuthPassword field is deprecated. Please use secureJsonData.basicAuthPassword",
 				"datasource name",
 				ds.Name.Value(),
@@ -162,7 +162,7 @@ func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	}
 
 	for _, ds := range cfg.DeleteDatasources {
-		r.DeleteDatasources = append(r.DeleteDatasources, &deleteDatasourceConfig{
+		r.DeleteDatasources = append(r.DeleteDatasources, &DeleteDatasourceConfig{
 			OrgID: ds.OrgID.Value(),
 			Name:  ds.Name.Value(),
 		})
@@ -171,8 +171,8 @@ func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	return r
 }
 
-func (cfg *configsV0) mapToDatasourceFromConfig(apiVersion int64) *configs {
-	r := &configs{}
+func (cfg *ConfigsV0) MapToDatasourceFromConfig(apiVersion int64) *Configs {
+	r := &Configs{}
 
 	r.APIVersion = apiVersion
 
@@ -181,7 +181,7 @@ func (cfg *configsV0) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	}
 
 	for _, ds := range cfg.Datasources {
-		r.Datasources = append(r.Datasources, &upsertDataSourceFromConfig{
+		r.Datasources = append(r.Datasources, &UpsertDataSourceFromConfig{
 			OrgID:             ds.OrgID,
 			Name:              ds.Name,
 			Type:              ds.Type,
@@ -203,7 +203,7 @@ func (cfg *configsV0) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	}
 
 	for _, ds := range cfg.DeleteDatasources {
-		r.DeleteDatasources = append(r.DeleteDatasources, &deleteDatasourceConfig{
+		r.DeleteDatasources = append(r.DeleteDatasources, &DeleteDatasourceConfig{
 			OrgID: ds.OrgID,
 			Name:  ds.Name,
 		})
@@ -212,7 +212,7 @@ func (cfg *configsV0) mapToDatasourceFromConfig(apiVersion int64) *configs {
 	return r
 }
 
-func createInsertCommand(ds *upsertDataSourceFromConfig) *models.AddDataSourceCommand {
+func CreateInsertCommand(ds *UpsertDataSourceFromConfig) *models.AddDataSourceCommand {
 	jsonData := simplejson.New()
 	if len(ds.JSONData) > 0 {
 		for k, v := range ds.JSONData {
@@ -241,7 +241,7 @@ func createInsertCommand(ds *upsertDataSourceFromConfig) *models.AddDataSourceCo
 	}
 }
 
-func createUpdateCommand(ds *upsertDataSourceFromConfig, id int64) *models.UpdateDataSourceCommand {
+func CreateUpdateCommand(ds *UpsertDataSourceFromConfig, id int64) *models.UpdateDataSourceCommand {
 	jsonData := simplejson.New()
 	if len(ds.JSONData) > 0 {
 		for k, v := range ds.JSONData {

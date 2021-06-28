@@ -1,21 +1,19 @@
-package datasources
+package provisioner
 
 import (
 	"errors"
 	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader/diskconfigreader"
+
 	"github.com/grafana/grafana/pkg/setting"
 
 	"github.com/grafana/grafana/pkg/infra/log"
 
 	"github.com/grafana/grafana/pkg/models"
-)
-
-var (
-	// ErrInvalidConfigToManyDefault indicates that multiple datasource in the provisioning files
-	// contains more than one datasource marked as default.
-	ErrInvalidConfigToManyDefault = errors.New("datasource.yaml config is invalid. Only one datasource per organization can be marked as default")
 )
 
 // Provision scans a directory for provisioning config files
@@ -30,7 +28,7 @@ func (dc *DatasourceProvisioner) Provision() error {
 type DatasourceProvisioner struct {
 	log         log.Logger
 	cfg         *setting.Cfg
-	cfgProvider *configReader
+	cfgProvider configreader.ConfigReader
 }
 
 func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
@@ -38,11 +36,11 @@ func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
 	return DatasourceProvisioner{
 		log:         logger,
 		cfg:         cfg,
-		cfgProvider: &configReader{log: logger},
+		cfgProvider: diskconfigreader.NewConfigReader(logger),
 	}
 }
 
-func (dc *DatasourceProvisioner) apply(cfg *configs) error {
+func (dc *DatasourceProvisioner) apply(cfg *datasources.Configs) error {
 	if err := dc.deleteDatasources(cfg.DeleteDatasources); err != nil {
 		return err
 	}
@@ -56,13 +54,13 @@ func (dc *DatasourceProvisioner) apply(cfg *configs) error {
 
 		if errors.Is(err, models.ErrDataSourceNotFound) {
 			dc.log.Info("inserting datasource from configuration ", "name", ds.Name, "uid", ds.UID)
-			insertCmd := createInsertCommand(ds)
+			insertCmd := datasources.CreateInsertCommand(ds)
 			if err := bus.Dispatch(insertCmd); err != nil {
 				return err
 			}
 		} else {
 			dc.log.Debug("updating datasource from configuration", "name", ds.Name, "uid", ds.UID)
-			updateCmd := createUpdateCommand(ds, cmd.Result.Id)
+			updateCmd := datasources.CreateUpdateCommand(ds, cmd.Result.Id)
 			if err := bus.Dispatch(updateCmd); err != nil {
 				return err
 			}
@@ -73,7 +71,7 @@ func (dc *DatasourceProvisioner) apply(cfg *configs) error {
 }
 
 func (dc *DatasourceProvisioner) applyChanges(configPath string) error {
-	configs, err := dc.cfgProvider.readConfig(configPath)
+	configs, err := dc.cfgProvider.ReadConfigs(configPath)
 	if err != nil {
 		return err
 	}
@@ -87,7 +85,7 @@ func (dc *DatasourceProvisioner) applyChanges(configPath string) error {
 	return nil
 }
 
-func (dc *DatasourceProvisioner) deleteDatasources(dsToDelete []*deleteDatasourceConfig) error {
+func (dc *DatasourceProvisioner) deleteDatasources(dsToDelete []*datasources.DeleteDatasourceConfig) error {
 	for _, ds := range dsToDelete {
 		cmd := &models.DeleteDataSourceCommand{OrgID: ds.OrgID, Name: ds.Name}
 		if err := bus.Dispatch(cmd); err != nil {

@@ -1,4 +1,4 @@
-package datasources
+package diskconfigreader
 
 import (
 	"fmt"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
 	"github.com/grafana/grafana/pkg/services/provisioning/utils"
 	"gopkg.in/yaml.v2"
 )
@@ -17,8 +19,12 @@ type configReader struct {
 	log log.Logger
 }
 
-func (cr *configReader) readConfig(path string) ([]*configs, error) {
-	var datasources []*configs
+func NewConfigReader(log log.Logger) configreader.ConfigReader {
+	return &configReader{log: log}
+}
+
+func (cr *configReader) ReadConfigs(path string) ([]*datasources.Configs, error) {
+	var datasources []*datasources.Configs
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -47,7 +53,7 @@ func (cr *configReader) readConfig(path string) ([]*configs, error) {
 	return datasources, nil
 }
 
-func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*configs, error) {
+func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*datasources.Configs, error) {
 	filename, _ := filepath.Abs(filepath.Join(path, file.Name()))
 
 	// nolint:gosec
@@ -57,27 +63,27 @@ func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*c
 		return nil, err
 	}
 
-	var apiVersion *configVersion
+	var apiVersion *datasources.ConfigVersion
 	err = yaml.Unmarshal(yamlFile, &apiVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	if apiVersion == nil {
-		apiVersion = &configVersion{APIVersion: 0}
+		apiVersion = &datasources.ConfigVersion{APIVersion: 0}
 	}
 
 	if apiVersion.APIVersion > 0 {
-		v1 := &configsV1{log: cr.log}
+		v1 := &datasources.ConfigsV1{Log: cr.log}
 		err = yaml.Unmarshal(yamlFile, v1)
 		if err != nil {
 			return nil, err
 		}
 
-		return v1.mapToDatasourceFromConfig(apiVersion.APIVersion), nil
+		return v1.MapToDatasourceFromConfig(apiVersion.APIVersion), nil
 	}
 
-	var v0 *configsV0
+	var v0 *datasources.ConfigsV0
 	err = yaml.Unmarshal(yamlFile, &v0)
 	if err != nil {
 		return nil, err
@@ -85,17 +91,17 @@ func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*c
 
 	cr.log.Warn("[Deprecated] the datasource provisioning config is outdated. please upgrade", "filename", filename)
 
-	return v0.mapToDatasourceFromConfig(apiVersion.APIVersion), nil
+	return v0.MapToDatasourceFromConfig(apiVersion.APIVersion), nil
 }
 
-func (cr *configReader) validateDefaultUniqueness(datasources []*configs) error {
+func (cr *configReader) validateDefaultUniqueness(datasourcesCfg []*datasources.Configs) error {
 	defaultCount := map[int64]int{}
-	for i := range datasources {
-		if datasources[i].Datasources == nil {
+	for i := range datasourcesCfg {
+		if datasourcesCfg[i].Datasources == nil {
 			continue
 		}
 
-		for _, ds := range datasources[i].Datasources {
+		for _, ds := range datasourcesCfg[i].Datasources {
 			if ds.OrgID == 0 {
 				ds.OrgID = 1
 			}
@@ -107,12 +113,12 @@ func (cr *configReader) validateDefaultUniqueness(datasources []*configs) error 
 			if ds.IsDefault {
 				defaultCount[ds.OrgID]++
 				if defaultCount[ds.OrgID] > 1 {
-					return ErrInvalidConfigToManyDefault
+					return datasources.ErrInvalidConfigToManyDefault
 				}
 			}
 		}
 
-		for _, ds := range datasources[i].DeleteDatasources {
+		for _, ds := range datasourcesCfg[i].DeleteDatasources {
 			if ds.OrgID == 0 {
 				ds.OrgID = 1
 			}
@@ -122,7 +128,7 @@ func (cr *configReader) validateDefaultUniqueness(datasources []*configs) error 
 	return nil
 }
 
-func (cr *configReader) validateAccessAndOrgID(ds *upsertDataSourceFromConfig) error {
+func (cr *configReader) validateAccessAndOrgID(ds *datasources.UpsertDataSourceFromConfig) error {
 	if err := utils.CheckOrgExists(ds.OrgID); err != nil {
 		return err
 	}

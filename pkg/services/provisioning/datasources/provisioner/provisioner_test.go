@@ -1,12 +1,12 @@
-package datasources
+package provisioner
 
 import (
-	"os"
 	"testing"
 
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/setting"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -15,15 +15,15 @@ import (
 var (
 	logger log.Logger = log.New("fake.log")
 
-	twoDatasourcesConfig            = "testdata/two-datasources"
-	twoDatasourcesConfigPurgeOthers = "testdata/insert-two-delete-two"
-	doubleDatasourcesConfig         = "testdata/double-default"
-	allProperties                   = "testdata/all-properties"
-	versionZero                     = "testdata/version-0"
-	brokenYaml                      = "testdata/broken-yaml"
-	multipleOrgsWithDefault         = "testdata/multiple-org-default"
-	withoutDefaults                 = "testdata/appliedDefaults"
-	invalidAccess                   = "testdata/invalid-access"
+	twoDatasourcesConfig            = "../configreader/diskconfigreader/testdata/two-datasources"
+	twoDatasourcesConfigPurgeOthers = "../configreader/diskconfigreader/testdata/insert-two-delete-two"
+	doubleDatasourcesConfig         = "../configreader/diskconfigreader/testdata/double-default"
+	allProperties                   = "../configreader/diskconfigreader/testdata/all-properties"
+	versionZero                     = "../configreader/diskconfigreader/testdata/version-0"
+	brokenYaml                      = "../configreader/diskconfigreader/testdata/broken-yaml"
+	multipleOrgsWithDefault         = "../configreader/diskconfigreader/testdata/multiple-org-default"
+	withoutDefaults                 = "../configreader/diskconfigreader/testdata/appliedDefaults"
+	invalidAccess                   = "../configreader/diskconfigreader/testdata/invalid-access"
 
 	fakeRepo *fakeRepository
 )
@@ -96,7 +96,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 				dc := setupTestEnv(t, false)
 				err := dc.applyChanges(doubleDatasourcesConfig)
 				Convey("should raise error", func() {
-					So(err, ShouldEqual, ErrInvalidConfigToManyDefault)
+					So(err, ShouldEqual, datasources.ErrInvalidConfigToManyDefault)
 				})
 			})
 		})
@@ -155,87 +155,17 @@ func TestDatasourceAsConfig(t *testing.T) {
 				})
 			})
 		})
-
-		Convey("broken yaml should return error", func() {
-			reader := &configReader{}
-			_, err := reader.readConfig(brokenYaml)
-			So(err, ShouldNotBeNil)
-		})
-
-		Convey("invalid access should warn about invalid value and return 'proxy'", func() {
-			reader := &configReader{log: logger}
-			configs, err := reader.readConfig(invalidAccess)
-			So(err, ShouldBeNil)
-			So(configs[0].Datasources[0].Access, ShouldEqual, models.DS_ACCESS_PROXY)
-		})
-
-		Convey("skip invalid directory", func() {
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig("./invalid-directory")
-			if err != nil {
-				t.Fatalf("readConfig return an error %v", err)
-			}
-
-			So(len(cfg), ShouldEqual, 0)
-		})
-
-		Convey("can read all properties from version 1", func() {
-			_ = os.Setenv("TEST_VAR", "name")
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig(allProperties)
-			_ = os.Unsetenv("TEST_VAR")
-			if err != nil {
-				t.Fatalf("readConfig return an error %v", err)
-			}
-
-			So(len(cfg), ShouldEqual, 3)
-
-			dsCfg := cfg[0]
-
-			So(dsCfg.APIVersion, ShouldEqual, 1)
-
-			validateDatasourceV1(dsCfg)
-			validateDeleteDatasources(dsCfg)
-
-			dsCount := 0
-			delDsCount := 0
-
-			for _, c := range cfg {
-				dsCount += len(c.Datasources)
-				delDsCount += len(c.DeleteDatasources)
-			}
-
-			So(dsCount, ShouldEqual, 2)
-			So(delDsCount, ShouldEqual, 1)
-		})
-
-		Convey("can read all properties from version 0", func() {
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.readConfig(versionZero)
-			if err != nil {
-				t.Fatalf("readConfig return an error %v", err)
-			}
-
-			So(len(cfg), ShouldEqual, 1)
-
-			dsCfg := cfg[0]
-
-			So(dsCfg.APIVersion, ShouldEqual, 0)
-
-			validateDatasource(dsCfg)
-			validateDeleteDatasources(dsCfg)
-		})
 	})
 }
 
-func validateDeleteDatasources(dsCfg *configs) {
+func validateDeleteDatasources(dsCfg *datasources.Configs) {
 	So(len(dsCfg.DeleteDatasources), ShouldEqual, 1)
 	deleteDs := dsCfg.DeleteDatasources[0]
 	So(deleteDs.Name, ShouldEqual, "old-graphite3")
 	So(deleteDs.OrgID, ShouldEqual, 2)
 }
 
-func validateDatasource(dsCfg *configs) {
+func validateDatasource(dsCfg *datasources.Configs) {
 	ds := dsCfg.Datasources[0]
 	So(ds.Name, ShouldEqual, "name")
 	So(ds.Type, ShouldEqual, "type")
@@ -264,7 +194,7 @@ func validateDatasource(dsCfg *configs) {
 	So(ds.SecureJSONData["tlsClientKey"], ShouldEqual, "ZkN4aG1aNkja/gKAB1wlnKFIsy2SRDq4slrM0A==")
 }
 
-func validateDatasourceV1(dsCfg *configs) {
+func validateDatasourceV1(dsCfg *datasources.Configs) {
 	validateDatasource(dsCfg)
 	ds := dsCfg.Datasources[0]
 	So(ds.UID, ShouldEqual, "test_uid")
