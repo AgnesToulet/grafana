@@ -42,7 +42,6 @@ func NewProvisioningServiceImpl() *provisioningServiceImpl {
 		log:                     log.New("provisioning"),
 		newDashboardProvisioner: dashboards.New,
 		provisionNotifiers:      notifiers.Provision,
-		provisionDatasources:    datasources.Provision,
 		provisionPlugins:        plugins.Provision,
 	}
 }
@@ -51,14 +50,12 @@ func NewProvisioningServiceImpl() *provisioningServiceImpl {
 func newProvisioningServiceImpl(
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory,
 	provisionNotifiers func(string) error,
-	provisionDatasources func(string) error,
 	provisionPlugins func(string, plugifaces.Manager) error,
 ) *provisioningServiceImpl {
 	return &provisioningServiceImpl{
 		log:                     log.New("provisioning"),
 		newDashboardProvisioner: newDashboardProvisioner,
 		provisionNotifiers:      provisionNotifiers,
-		provisionDatasources:    provisionDatasources,
 		provisionPlugins:        provisionPlugins,
 	}
 }
@@ -72,12 +69,15 @@ type provisioningServiceImpl struct {
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
 	dashboardProvisioner    dashboards.DashboardProvisioner
 	provisionNotifiers      func(string) error
-	provisionDatasources    func(string) error
+	provisionDatasources    func() error
 	provisionPlugins        func(string, plugifaces.Manager) error
 	mutex                   sync.Mutex
 }
 
 func (ps *provisioningServiceImpl) Init() error {
+	datasourceProvis := datasources.NewDatasourceProvisioner(ps.Cfg)
+	ps.provisionDatasources = datasourceProvis.Provision
+
 	return ps.RunInitProvisioners()
 }
 
@@ -130,8 +130,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDatasources() error {
-	datasourcePath := filepath.Join(ps.Cfg.ProvisioningPath, "datasources")
-	err := ps.provisionDatasources(datasourcePath)
+	err := ps.provisionDatasources()
 	return errutil.Wrap("Datasource provisioning error", err)
 }
 

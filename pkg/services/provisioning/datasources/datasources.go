@@ -2,8 +2,10 @@ package datasources
 
 import (
 	"errors"
+	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/setting"
 
 	"github.com/grafana/grafana/pkg/infra/log"
 
@@ -18,22 +20,25 @@ var (
 
 // Provision scans a directory for provisioning config files
 // and provisions the datasource in those files.
-func Provision(configDirectory string) error {
-	dc := newDatasourceProvisioner(log.New("provisioning.datasources"))
-	return dc.applyChanges(configDirectory)
+func (dc *DatasourceProvisioner) Provision() error {
+	configPath := filepath.Join(dc.cfg.ProvisioningPath, "datasources")
+	return dc.applyChanges(configPath)
 }
 
 // DatasourceProvisioner is responsible for provisioning datasources based on
 // configuration read by the `configReader`
 type DatasourceProvisioner struct {
 	log         log.Logger
+	cfg         *setting.Cfg
 	cfgProvider *configReader
 }
 
-func newDatasourceProvisioner(log log.Logger) DatasourceProvisioner {
+func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
+	logger := log.New("accesscontrol.provisioner")
 	return DatasourceProvisioner{
-		log:         log,
-		cfgProvider: &configReader{log: log},
+		log:         logger,
+		cfg:         cfg,
+		cfgProvider: &configReader{log: logger},
 	}
 }
 
