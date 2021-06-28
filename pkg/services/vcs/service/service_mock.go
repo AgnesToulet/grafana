@@ -29,16 +29,16 @@ func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) er
 }
 
 func (m *VCSServiceMock) Latest(ctx context.Context, kind vcs.Kind) (map[string]vcs.VersionedObject, error) {
-	m.Calls.Store = append(m.Calls.Store, []interface{}{ctx, kind})
-	if m.StoreFunc != nil {
+	m.Calls.Latest = append(m.Calls.Latest, []interface{}{ctx, kind})
+	if m.LatestFunc != nil {
 		return m.LatestFunc(ctx, kind)
 	}
 	return nil, nil
 }
 
 func (m *VCSServiceMock) History(ctx context.Context, kind vcs.Kind, id string) ([]vcs.VersionedObject, error) {
-	m.Calls.Store = append(m.Calls.Store, []interface{}{ctx, kind, id})
-	if m.StoreFunc != nil {
+	m.Calls.History = append(m.Calls.History, []interface{}{ctx, kind, id})
+	if m.HistoryFunc != nil {
 		return m.HistoryFunc(ctx, kind, id)
 	}
 	return nil, nil
