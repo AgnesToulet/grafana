@@ -57,7 +57,7 @@ type ConfigsV1 struct {
 	ConfigVersion
 	Log log.Logger
 
-	Datasources       []*upsertDataSourceFromConfigV1 `json:"datasources" yaml:"datasources"`
+	Datasources       []*UpsertDataSourceFromConfigV1 `json:"datasources" yaml:"datasources"`
 	DeleteDatasources []*deleteDatasourceConfigV1     `json:"deleteDatasources" yaml:"deleteDatasources"`
 }
 
@@ -91,7 +91,7 @@ type upsertDataSourceFromConfigV0 struct {
 	Editable          bool                   `json:"editable" yaml:"editable"`
 }
 
-type upsertDataSourceFromConfigV1 struct {
+type UpsertDataSourceFromConfigV1 struct {
 	OrgID             values.Int64Value     `json:"orgId" yaml:"orgId"`
 	Version           values.IntValue       `json:"version" yaml:"version"`
 	Name              values.StringValue    `json:"name" yaml:"name"`
