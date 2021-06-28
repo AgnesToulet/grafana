@@ -23,7 +23,7 @@ func init() {
 	registry.Register(&registry.Descriptor{
 		Name:         ServiceName,
 		Instance:     &VCSService{},
-		InitPriority: registry.MediumHigh,
+		InitPriority: registry.High,
 	})
 }
 

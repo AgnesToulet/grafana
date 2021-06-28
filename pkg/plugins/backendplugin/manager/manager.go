@@ -29,7 +29,7 @@ func init() {
 	registry.RegisterServiceWithPriority(&manager{
 		logger:  log.New("plugins.backend"),
 		plugins: map[string]backendplugin.Plugin{},
-	}, registry.High)
+	}, registry.MediumHigh)
 }
 
 type manager struct {
