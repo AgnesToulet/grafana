@@ -41,6 +41,9 @@ func newClientConfig(executablePath string, env []string, logger log.Logger,
 // StartRendererFunc callback function called when a renderer plugin is started.
 type StartRendererFunc func(pluginID string, renderer pluginextensionv2.RendererPlugin, logger log.Logger) error
 
+// StartVCSFunc callback function called when a versioned control storage plugin is started.
+type StartVCSFunc func(pluginID string, vcs pluginextensionv2.VCSPlugin, logger log.Logger) error
+
 // PluginDescriptor is a descriptor used for registering backend plugins.
 type PluginDescriptor struct {
 	pluginID         string
@@ -48,6 +51,7 @@ type PluginDescriptor struct {
 	managed          bool
 	versionedPlugins map[int]goplugin.PluginSet
 	startRendererFn  StartRendererFunc
+	startVCSFn       StartVCSFunc
 }
 
 // getV2PluginSet returns list of plugins supported on v2.
@@ -58,6 +62,7 @@ func getV2PluginSet() goplugin.PluginSet {
 		"data":        &grpcplugin.DataGRPCPlugin{},
 		"stream":      &grpcplugin.StreamGRPCPlugin{},
 		"renderer":    &pluginextensionv2.RendererGRPCPlugin{},
+		"vcs":         &pluginextensionv2.VersionedStorageGRPCPlugin{},
 	}
 }
 
@@ -83,5 +88,18 @@ func NewRendererPlugin(pluginID, executablePath string, startFn StartRendererFun
 			grpcplugin.ProtocolVersion: getV2PluginSet(),
 		},
 		startRendererFn: startFn,
+	})
+}
+
+// NewVCSPlugin creates a new versioned control storage plugin factory used for registering a backend renderer plugin.
+func NewVCSPlugin(pluginID, executablePath string, startFn StartVCSFunc) backendplugin.PluginFactoryFunc {
+	return newPlugin(PluginDescriptor{
+		pluginID:       pluginID,
+		executablePath: executablePath,
+		managed:        false,
+		versionedPlugins: map[int]goplugin.PluginSet{
+			grpcplugin.ProtocolVersion: getV2PluginSet(),
+		},
+		startVCSFn: startFn,
 	})
 }
