@@ -19,8 +19,7 @@ import (
 // Provision scans a directory for provisioning config files
 // and provisions the datasource in those files.
 func (dc *DatasourceProvisioner) Provision() error {
-	configPath := filepath.Join(dc.cfg.ProvisioningPath, "datasources")
-	return dc.applyChanges(configPath)
+	return dc.applyChanges()
 }
 
 // DatasourceProvisioner is responsible for provisioning datasources based on
@@ -33,10 +32,11 @@ type DatasourceProvisioner struct {
 
 func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
 	logger := log.New("accesscontrol.provisioner")
+	configPath := filepath.Join(cfg.ProvisioningPath, "datasources")
 	return DatasourceProvisioner{
 		log:         logger,
 		cfg:         cfg,
-		cfgProvider: diskconfigreader.NewConfigReader(logger),
+		cfgProvider: diskconfigreader.NewConfigReader(logger, configPath),
 	}
 }
 
@@ -70,8 +70,8 @@ func (dc *DatasourceProvisioner) apply(cfg *datasources.Configs) error {
 	return nil
 }
 
-func (dc *DatasourceProvisioner) applyChanges(configPath string) error {
-	configs, err := dc.cfgProvider.ReadConfigs(configPath)
+func (dc *DatasourceProvisioner) applyChanges() error {
+	configs, err := dc.cfgProvider.ReadConfigs()
 	if err != nil {
 		return err
 	}

@@ -16,25 +16,26 @@ import (
 )
 
 type configReader struct {
-	log log.Logger
+	log        log.Logger
+	configPath string
 }
 
-func NewConfigReader(log log.Logger) configreader.ConfigReader {
-	return &configReader{log: log}
+func NewConfigReader(log log.Logger, configPath string) configreader.ConfigReader {
+	return &configReader{log: log, configPath: configPath}
 }
 
-func (cr *configReader) ReadConfigs(path string) ([]*datasources.Configs, error) {
+func (cr *configReader) ReadConfigs() ([]*datasources.Configs, error) {
 	var datasources []*datasources.Configs
 
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(cr.configPath)
 	if err != nil {
-		cr.log.Error("can't read datasource provisioning files from directory", "path", path, "error", err)
+		cr.log.Error("can't read datasource provisioning files from directory", "path", cr.configPath, "error", err)
 		return datasources, nil
 	}
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") {
-			datasource, err := cr.parseDatasourceConfig(path, file)
+			datasource, err := cr.parseDatasourceConfig(cr.configPath, file)
 			if err != nil {
 				return nil, err
 			}

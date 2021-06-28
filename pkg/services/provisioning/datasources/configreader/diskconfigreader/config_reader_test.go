@@ -15,15 +15,10 @@ import (
 var (
 	logger log.Logger = log.New("fake.log")
 
-	twoDatasourcesConfig            = "testdata/two-datasources"
-	twoDatasourcesConfigPurgeOthers = "testdata/insert-two-delete-two"
-	doubleDatasourcesConfig         = "testdata/double-default"
-	allProperties                   = "testdata/all-properties"
-	versionZero                     = "testdata/version-0"
-	brokenYaml                      = "testdata/broken-yaml"
-	multipleOrgsWithDefault         = "testdata/multiple-org-default"
-	withoutDefaults                 = "testdata/appliedDefaults"
-	invalidAccess                   = "testdata/invalid-access"
+	allProperties = "testdata/all-properties"
+	versionZero   = "testdata/version-0"
+	brokenYaml    = "testdata/broken-yaml"
+	invalidAccess = "testdata/invalid-access"
 )
 
 func TestDatasourceAsConfig(t *testing.T) {
@@ -32,21 +27,21 @@ func TestDatasourceAsConfig(t *testing.T) {
 		bus.AddHandler("test", mockGetOrg)
 
 		Convey("broken yaml should return error", func() {
-			reader := &configReader{}
-			_, err := reader.ReadConfigs(brokenYaml)
+			reader := &configReader{configPath: brokenYaml}
+			_, err := reader.ReadConfigs()
 			So(err, ShouldNotBeNil)
 		})
 
 		Convey("invalid access should warn about invalid value and return 'proxy'", func() {
-			reader := &configReader{log: logger}
-			configs, err := reader.ReadConfigs(invalidAccess)
+			reader := &configReader{log: logger, configPath: invalidAccess}
+			configs, err := reader.ReadConfigs()
 			So(err, ShouldBeNil)
 			So(configs[0].Datasources[0].Access, ShouldEqual, models.DS_ACCESS_PROXY)
 		})
 
 		Convey("skip invalid directory", func() {
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.ReadConfigs("./invalid-directory")
+			cfgProvider := &configReader{log: log.New("test logger"), configPath: "./invalid-directory"}
+			cfg, err := cfgProvider.ReadConfigs()
 			if err != nil {
 				t.Fatalf("ReadConfig returns an error %v", err)
 			}
@@ -56,8 +51,8 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("can read all properties from version 1", func() {
 			_ = os.Setenv("TEST_VAR", "name")
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.ReadConfigs(allProperties)
+			cfgProvider := &configReader{log: log.New("test logger"), configPath: allProperties}
+			cfg, err := cfgProvider.ReadConfigs()
 			_ = os.Unsetenv("TEST_VAR")
 			if err != nil {
 				t.Fatalf("ReadConfig returns an error %v", err)
@@ -85,8 +80,8 @@ func TestDatasourceAsConfig(t *testing.T) {
 		})
 
 		Convey("can read all properties from version 0", func() {
-			cfgProvider := &configReader{log: log.New("test logger")}
-			cfg, err := cfgProvider.ReadConfigs(versionZero)
+			cfgProvider := &configReader{log: log.New("test logger"), configPath: versionZero}
+			cfg, err := cfgProvider.ReadConfigs()
 			if err != nil {
 				t.Fatalf("ReadConfig returns an error %v", err)
 			}
