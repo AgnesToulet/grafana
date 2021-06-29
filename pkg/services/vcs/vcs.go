@@ -36,8 +36,10 @@ func (vs *VCSService) Init() error {
 func (vs *VCSService) Run(ctx context.Context) error {
 	vs.plugin = vs.PluginManager.VersionedControlStorage()
 
-	if err := vs.plugin.Start(ctx); err != nil {
-		return err
+	if vs.plugin != nil {
+		if err := vs.plugin.Start(ctx); err != nil {
+			return err
+		}
 	}
 
 	<-ctx.Done()
