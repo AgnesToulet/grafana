@@ -9,7 +9,11 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
+	"github.com/grafana/grafana/pkg/services/vcs"
+	"github.com/grafana/grafana/pkg/services/vcs/vcsmock"
 	"github.com/grafana/grafana/pkg/setting"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -26,37 +30,48 @@ var (
 	fakeRepo *fakeRepository
 )
 
-func setupTestEnv(t testing.TB, gitops bool, configPath string) *DatasourceProvisioner {
+func setupTestEnv(t testing.TB, gitops bool, configPath string) (*DatasourceProvisioner, *vcsmock.VCSServiceMock) {
 	t.Helper()
-
 	logger = log.New("datasource.provisioner-test")
 
+	// Set gitops feature toggle
 	cfg := setting.NewCfg()
 	cfg.FeatureToggles = map[string]bool{"gitops": gitops}
 
-	dc := NewDatasourceProvisioner(cfg)
-	dc.log = logger
+	calls := vcsmock.Calls{}
+	vcsMock := vcsmock.VCSServiceMock{Calls: &calls}
 
-	// Override the config reader to use test data
+	provisioner := NewDatasourceProvisioner(cfg, &vcsMock)
+	// Override provisioner's logger
+	provisioner.log = logger
+
+	// Override the config reader to use test data and test logger
 	if !gitops {
-		dc.cfgProvider = configreader.NewDiskConfigReader(logger, configPath)
+		provisioner.cfgProvider = configreader.NewDiskConfigReader(logger, configPath)
 	}
 
-	return &dc
+	return &provisioner, &vcsMock
 }
 
-func TestDatasourceAsConfig(t *testing.T) {
+func setupBusMock(t testing.TB) {
+	t.Helper()
+
+	fakeRepo = &fakeRepository{}
+	bus.ClearBusHandlers()
+	bus.AddHandler("test", mockDelete)
+	bus.AddHandler("test", mockInsert)
+	bus.AddHandler("test", mockUpdate)
+	bus.AddHandler("test", mockGet)
+	bus.AddHandler("test", mockGetOrg)
+}
+
+func TestDatasourceAsConfigFromFile(t *testing.T) {
+
 	Convey("Testing datasource as configuration", t, func() {
-		fakeRepo = &fakeRepository{}
-		bus.ClearBusHandlers()
-		bus.AddHandler("test", mockDelete)
-		bus.AddHandler("test", mockInsert)
-		bus.AddHandler("test", mockUpdate)
-		bus.AddHandler("test", mockGet)
-		bus.AddHandler("test", mockGetOrg)
+		setupBusMock(t)
 
 		Convey("apply default values when missing", func() {
-			dc := setupTestEnv(t, false, withoutDefaults)
+			dc, _ := setupTestEnv(t, false, withoutDefaults)
 			err := dc.applyChanges(context.TODO())
 			if err != nil {
 				t.Fatalf("applyChanges return an error %v", err)
@@ -69,7 +84,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("One configured datasource", func() {
 			Convey("no datasource in database", func() {
-				dc := setupTestEnv(t, false, twoDatasourcesConfig)
+				dc, _ := setupTestEnv(t, false, twoDatasourcesConfig)
 				err := dc.applyChanges(context.TODO())
 				if err != nil {
 					t.Fatalf("applyChanges return an error %v", err)
@@ -86,7 +101,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 				}
 
 				Convey("should update one datasource", func() {
-					dc := setupTestEnv(t, false, twoDatasourcesConfig)
+					dc, _ := setupTestEnv(t, false, twoDatasourcesConfig)
 					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
@@ -99,7 +114,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 			})
 
 			Convey("Two datasources with is_default", func() {
-				dc := setupTestEnv(t, false, doubleDatasourcesConfig)
+				dc, _ := setupTestEnv(t, false, doubleDatasourcesConfig)
 				err := dc.applyChanges(context.TODO())
 				Convey("should raise error", func() {
 					So(err, ShouldEqual, datasources.ErrInvalidConfigToManyDefault)
@@ -108,7 +123,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 		})
 
 		Convey("Multiple datasources in different organizations with isDefault in each organization", func() {
-			dc := setupTestEnv(t, false, multipleOrgsWithDefault)
+			dc, _ := setupTestEnv(t, false, multipleOrgsWithDefault)
 			err := dc.applyChanges(context.TODO())
 			Convey("should not raise error", func() {
 				So(err, ShouldBeNil)
@@ -128,7 +143,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 				}
 
 				Convey("should have two new datasources", func() {
-					dc := setupTestEnv(t, false, twoDatasourcesConfigPurgeOthers)
+					dc, _ := setupTestEnv(t, false, twoDatasourcesConfigPurgeOthers)
 					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
@@ -149,7 +164,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 				}
 
 				Convey("should have two new datasources", func() {
-					dc := setupTestEnv(t, false, twoDatasourcesConfig)
+					dc, _ := setupTestEnv(t, false, twoDatasourcesConfig)
 					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
@@ -204,6 +219,108 @@ func validateDatasourceV1(dsCfg *datasources.Configs) {
 	validateDatasource(dsCfg)
 	ds := dsCfg.Datasources[0]
 	So(ds.UID, ShouldEqual, "test_uid")
+}
+
+type BusActionCount struct {
+	insertCnt, updateCnt, deleteCnt int
+}
+
+func TestProvisionFromVCS(t *testing.T) {
+	tt := []struct {
+		name    string
+		latest  map[string]vcs.VersionedObject
+		loadAll []*models.DataSource
+		busCnt  BusActionCount
+		wantErr error
+	}{
+		{
+			name: "should work with empty latest",
+		},
+		{
+			name: "should insert a Postgres Datasrc",
+			latest: map[string]vcs.VersionedObject{
+				"postgresDatasrc": {
+					ID:      "postgresDatasrc",
+					Version: "test_version",
+					Kind:    vcs.Datasource,
+					Data: []byte(`{
+						    "uid": "postgresDatasrc",
+						    "orgId": 1,
+						    "name": "PostgreSQL",
+						    "type": "postgres",
+						    "typeName": "PostgreSQL",
+						    "access": "proxy",
+						    "url": "localhost:5432",
+						    "password": "user",
+						    "user": "user",
+						    "database": "database",
+						    "basicAuth": false,
+						    "isDefault": false,
+						    "jsonData": {
+						      "postgresVersion": 903,
+						      "sslmode": "disable",
+						      "tlsAuth": false,
+						      "tlsAuthWithCACert": false,
+						      "tlsConfigurationMethod": "file-path",
+						      "tlsSkipVerify": true
+						    },
+						    "readOnly": false
+						  }`),
+					Timestamp: 0,
+				},
+			},
+			loadAll: []*models.DataSource{},
+			busCnt:  BusActionCount{insertCnt: 1},
+			wantErr: nil,
+		},
+		{
+			name: "should update a Prometheus Datasrc",
+			latest: map[string]vcs.VersionedObject{
+				"prometheusDatasrc": {
+					ID:      "prometheusDatasrc",
+					Version: "test_version",
+					Kind:    vcs.Datasource,
+					Data: []byte(`{
+						    "uid": "prometheusDatasrc",
+						    "orgId": 2,
+						    "name": "Prometheus",
+						    "type": "prometheus",
+						    "access": "proxy",
+						    "url": "localhost:9090"
+						  }`),
+					Timestamp: 0,
+				},
+			},
+			loadAll: []*models.DataSource{{Id: 1, OrgId: 2, Name: "Prometheus"}},
+			busCnt:  BusActionCount{updateCnt: 1},
+			wantErr: nil,
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup test env
+			setupBusMock(t)
+			dc, vcsMock := setupTestEnv(t, true, "")
+			vcsMock.LatestFunc = func(c context.Context, k vcs.Kind) (map[string]vcs.VersionedObject, error) {
+				return tc.latest, nil
+			}
+			fakeRepo.loadAll = tc.loadAll
+
+			// Provision
+			err := dc.Provision(context.TODO())
+
+			// Check result
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+
+			assert.Len(t, fakeRepo.deleted, tc.busCnt.deleteCnt)
+			assert.Len(t, fakeRepo.inserted, tc.busCnt.insertCnt)
+			assert.Len(t, fakeRepo.updated, tc.busCnt.updateCnt)
+		})
+	}
 }
 
 type fakeRepository struct {

@@ -8,6 +8,7 @@ import (
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
+	"github.com/grafana/grafana/pkg/services/vcs"
 
 	"github.com/grafana/grafana/pkg/setting"
 
@@ -30,13 +31,23 @@ type DatasourceProvisioner struct {
 	cfgProvider datasources.ConfigReader
 }
 
-func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
+func NewDatasourceProvisioner(cfg *setting.Cfg, vcs vcs.Service) DatasourceProvisioner {
+	var configReader datasources.ConfigReader
+
 	logger := log.New("accesscontrol.provisioner")
-	configPath := filepath.Join(cfg.ProvisioningPath, "datasources")
+
+	// Use feature toggle to read configs from files or Version Control System
+	if gitops, ok := cfg.FeatureToggles["gitops"]; ok && gitops {
+		configReader = configreader.NewVCSConfigReader(logger, vcs)
+	} else {
+		configPath := filepath.Join(cfg.ProvisioningPath, "datasources")
+		configReader = configreader.NewDiskConfigReader(logger, configPath)
+	}
+
 	return DatasourceProvisioner{
 		log:         logger,
 		cfg:         cfg,
-		cfgProvider: configreader.NewDiskConfigReader(logger, configPath),
+		cfgProvider: configReader,
 	}
 }
 

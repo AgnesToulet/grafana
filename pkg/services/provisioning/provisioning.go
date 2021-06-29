@@ -13,6 +13,7 @@ import (
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
 	"github.com/grafana/grafana/pkg/services/provisioning/plugins"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
+	"github.com/grafana/grafana/pkg/services/vcs"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util/errutil"
 )
@@ -64,6 +65,7 @@ type provisioningServiceImpl struct {
 	Cfg                     *setting.Cfg       `inject:""`
 	SQLStore                *sqlstore.SQLStore `inject:""`
 	PluginManager           plugifaces.Manager `inject:""`
+	VCS                     vcs.Service        `inject:""`
 	log                     log.Logger
 	pollingCtxCancel        context.CancelFunc
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
@@ -75,7 +77,7 @@ type provisioningServiceImpl struct {
 }
 
 func (ps *provisioningServiceImpl) Init() error {
-	datasourceProvis := datasources.NewDatasourceProvisioner(ps.Cfg)
+	datasourceProvis := datasources.NewDatasourceProvisioner(ps.Cfg, ps.VCS)
 	ps.provisionDatasources = datasourceProvis.Provision
 
 	return ps.RunInitProvisioners()

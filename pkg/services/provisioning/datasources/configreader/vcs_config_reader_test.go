@@ -16,8 +16,6 @@ import (
 // TODO test with multiple values in latest map? The order won't be guaranteed though.
 
 func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
-	type args struct {
-	}
 	tt := []struct {
 		name    string
 		latest  map[string]vcs.VersionedObject
@@ -149,6 +147,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 				require.ErrorIs(t, err, tc.wantErr)
 				return
 			}
+			require.NoError(t, err)
 
 			assert.EqualValues(t, tc.configs, readCfgs)
 		})
