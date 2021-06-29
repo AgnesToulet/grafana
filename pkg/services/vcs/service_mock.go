@@ -36,10 +36,10 @@ func (m *VCSServiceMock) Latest(ctx context.Context, kind Kind) (map[string]Vers
 	return nil, nil
 }
 
-func (m *VCSServiceMock) History(ctx context.Context, kind Kind, id string) ([]VersionedObject, error) {
-	m.Calls.History = append(m.Calls.History, []interface{}{ctx, kind, id})
+func (m *VCSServiceMock) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+	m.Calls.History = append(m.Calls.History, []interface{}{ctx, kind, ID})
 	if m.HistoryFunc != nil {
-		return m.HistoryFunc(ctx, kind, id)
+		return m.HistoryFunc(ctx, kind, ID)
 	}
 	return nil, nil
 }
