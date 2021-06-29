@@ -11,6 +11,7 @@
 package values
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -27,6 +28,18 @@ import (
 type IntValue struct {
 	value int
 	Raw   string
+}
+
+// UnmarshalJSON converts Json into an *IntValue
+func (val *IntValue) UnmarshalJSON(data []byte) error {
+	var value int
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	val.Raw = string(data)
+	val.value = value
+	return nil
 }
 
 // UnmarshalYAML converts YAML into an *IntValue
@@ -56,6 +69,18 @@ type Int64Value struct {
 	Raw   string
 }
 
+// UnmarshalJSON converts Json into an *Int64Value
+func (val *Int64Value) UnmarshalJSON(data []byte) error {
+	var value int64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	val.Raw = string(data)
+	val.value = value
+	return nil
+}
+
 // UnmarshalYAML converts YAML into an *Int64Value
 func (val *Int64Value) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	interpolated, err := getInterpolated(unmarshal)
@@ -83,7 +108,19 @@ type StringValue struct {
 	Raw   string
 }
 
-// UnmarshalYAML converts YAML into an *StringValue
+// UnmarshalJSON converts Json into a *StringValue
+func (val *StringValue) UnmarshalJSON(data []byte) error {
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	val.Raw = string(data)
+	val.value = value
+	return nil
+}
+
+// UnmarshalYAML converts YAML into a *StringValue
 func (val *StringValue) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	interpolated, err := getInterpolated(unmarshal)
 	if err != nil {
@@ -104,6 +141,18 @@ func (val *StringValue) Value() string {
 type BoolValue struct {
 	value bool
 	Raw   string
+}
+
+// UnmarshalJSON converts Json into a *BoolValue
+func (val *BoolValue) UnmarshalJSON(data []byte) error {
+	var value bool
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	val.Raw = string(data)
+	val.value = value
+	return nil
 }
 
 // UnmarshalYAML converts YAML into an *BoolValue
@@ -127,6 +176,19 @@ func (val *BoolValue) Value() bool {
 type JSONValue struct {
 	value map[string]interface{}
 	Raw   map[string]interface{}
+}
+
+// UnmarshalJSON converts Json into a *JSONValue
+func (val *JSONValue) UnmarshalJSON(data []byte) error {
+	var value map[string]interface{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	// TODO handle raw
+	val.Raw = nil
+	val.value = value
+	return nil
 }
 
 // UnmarshalYAML converts YAML into an *JSONValue
@@ -160,6 +222,19 @@ func (val *JSONValue) Value() map[string]interface{} {
 type StringMapValue struct {
 	value map[string]string
 	Raw   map[string]string
+}
+
+// UnmarshalJSON converts Json into a *StringMapValue
+func (val *StringMapValue) UnmarshalJSON(data []byte) error {
+	var value map[string]string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	// TODO handle raw
+	val.Raw = nil
+	val.value = value
+	return nil
 }
 
 // UnmarshalYAML converts YAML into an *StringMapValue
