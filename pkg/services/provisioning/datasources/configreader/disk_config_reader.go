@@ -1,4 +1,4 @@
-package diskconfigreader
+package configreader
 
 import (
 	"context"
@@ -11,21 +11,20 @@ import (
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
-	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
 	"github.com/grafana/grafana/pkg/services/provisioning/utils"
 	"gopkg.in/yaml.v2"
 )
 
-type configReader struct {
+type diskConfigReader struct {
 	log        log.Logger
 	configPath string
 }
 
-func NewConfigReader(log log.Logger, configPath string) configreader.ConfigReader {
-	return &configReader{log: log, configPath: configPath}
+func NewDiskConfigReader(log log.Logger, configPath string) datasources.ConfigReader {
+	return &diskConfigReader{log: log, configPath: configPath}
 }
 
-func (cr *configReader) ReadConfigs(_ context.Context) ([]*datasources.Configs, error) {
+func (cr *diskConfigReader) ReadConfigs(_ context.Context) ([]*datasources.Configs, error) {
 	var datasources []*datasources.Configs
 
 	files, err := ioutil.ReadDir(cr.configPath)
@@ -55,7 +54,7 @@ func (cr *configReader) ReadConfigs(_ context.Context) ([]*datasources.Configs, 
 	return datasources, nil
 }
 
-func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*datasources.Configs, error) {
+func (cr *diskConfigReader) parseDatasourceConfig(path string, file os.FileInfo) (*datasources.Configs, error) {
 	filename, _ := filepath.Abs(filepath.Join(path, file.Name()))
 
 	// nolint:gosec
@@ -96,7 +95,7 @@ func (cr *configReader) parseDatasourceConfig(path string, file os.FileInfo) (*d
 	return v0.MapToDatasourceFromConfig(apiVersion.APIVersion), nil
 }
 
-func (cr *configReader) validateDefaultUniqueness(datasourcesCfg []*datasources.Configs) error {
+func (cr *diskConfigReader) validateDefaultUniqueness(datasourcesCfg []*datasources.Configs) error {
 	defaultCount := map[int64]int{}
 	for i := range datasourcesCfg {
 		if datasourcesCfg[i].Datasources == nil {
@@ -130,7 +129,7 @@ func (cr *configReader) validateDefaultUniqueness(datasourcesCfg []*datasources.
 	return nil
 }
 
-func (cr *configReader) validateAccessAndOrgID(ds *datasources.UpsertDataSourceFromConfig) error {
+func (cr *diskConfigReader) validateAccessAndOrgID(ds *datasources.UpsertDataSourceFromConfig) error {
 	if err := utils.CheckOrgExists(ds.OrgID); err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
-	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader/diskconfigreader"
 
 	"github.com/grafana/grafana/pkg/setting"
 
@@ -28,7 +27,7 @@ func (dc *DatasourceProvisioner) Provision(ctx context.Context) error {
 type DatasourceProvisioner struct {
 	log         log.Logger
 	cfg         *setting.Cfg
-	cfgProvider configreader.ConfigReader
+	cfgProvider datasources.ConfigReader
 }
 
 func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
@@ -37,7 +36,7 @@ func NewDatasourceProvisioner(cfg *setting.Cfg) DatasourceProvisioner {
 	return DatasourceProvisioner{
 		log:         logger,
 		cfg:         cfg,
-		cfgProvider: diskconfigreader.NewConfigReader(logger, configPath),
+		cfgProvider: configreader.NewDiskConfigReader(logger, configPath),
 	}
 }
 

@@ -1,11 +1,17 @@
 package datasources
 
 import (
+	"context"
+
 	"github.com/grafana/grafana/pkg/components/simplejson"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/values"
 )
+
+type ConfigReader interface {
+	ReadConfigs(context.Context) ([]*Configs, error)
+}
 
 // ConfigVersion is used to figure out which API version a config uses.
 type ConfigVersion struct {

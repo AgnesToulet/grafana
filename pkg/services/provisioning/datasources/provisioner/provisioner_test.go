@@ -8,7 +8,7 @@ import (
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
-	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader/diskconfigreader"
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
 	"github.com/grafana/grafana/pkg/setting"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -17,11 +17,11 @@ import (
 var (
 	logger log.Logger = log.New("fake.log")
 
-	twoDatasourcesConfig            = "../configreader/diskconfigreader/testdata/two-datasources"
-	twoDatasourcesConfigPurgeOthers = "../configreader/diskconfigreader/testdata/insert-two-delete-two"
-	doubleDatasourcesConfig         = "../configreader/diskconfigreader/testdata/double-default"
-	multipleOrgsWithDefault         = "../configreader/diskconfigreader/testdata/multiple-org-default"
-	withoutDefaults                 = "../configreader/diskconfigreader/testdata/appliedDefaults"
+	twoDatasourcesConfig            = "../configreader/disktestdata/two-datasources"
+	twoDatasourcesConfigPurgeOthers = "../configreader/disktestdata/insert-two-delete-two"
+	doubleDatasourcesConfig         = "../configreader/disktestdata/double-default"
+	multipleOrgsWithDefault         = "../configreader/disktestdata/multiple-org-default"
+	withoutDefaults                 = "../configreader/disktestdata/appliedDefaults"
 
 	fakeRepo *fakeRepository
 )
@@ -39,7 +39,7 @@ func setupTestEnv(t testing.TB, gitops bool, configPath string) *DatasourceProvi
 
 	// Override the config reader to use test data
 	if !gitops {
-		dc.cfgProvider = diskconfigreader.NewConfigReader(logger, configPath)
+		dc.cfgProvider = configreader.NewDiskConfigReader(logger, configPath)
 	}
 
 	return &dc
