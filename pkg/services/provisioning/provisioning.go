@@ -62,24 +62,21 @@ func newProvisioningServiceImpl(
 }
 
 type provisioningServiceImpl struct {
-	Cfg                     *setting.Cfg       `inject:""`
-	SQLStore                *sqlstore.SQLStore `inject:""`
-	PluginManager           plugifaces.Manager `inject:""`
-	VCS                     vcs.Service        `inject:""`
+	Cfg                     *setting.Cfg                       `inject:""`
+	SQLStore                *sqlstore.SQLStore                 `inject:""`
+	PluginManager           plugifaces.Manager                 `inject:""`
+	VCS                     vcs.Service                        `inject:""`
+	DatasrcProvisioner      *datasources.DatasourceProvisioner `inject:""`
 	log                     log.Logger
 	pollingCtxCancel        context.CancelFunc
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
 	dashboardProvisioner    dashboards.DashboardProvisioner
 	provisionNotifiers      func(string) error
-	provisionDatasources    func(context.Context) error
 	provisionPlugins        func(string, plugifaces.Manager) error
 	mutex                   sync.Mutex
 }
 
 func (ps *provisioningServiceImpl) Init() error {
-	datasourceProvis := datasources.NewDatasourceProvisioner(ps.Cfg, ps.VCS)
-	ps.provisionDatasources = datasourceProvis.Provision
-
 	return ps.RunInitProvisioners()
 }
 
@@ -132,7 +129,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDatasources() error {
-	err := ps.provisionDatasources(context.TODO())
+	err := ps.DatasrcProvisioner.Provision(context.TODO())
 	return errutil.Wrap("Datasource provisioning error", err)
 }
 

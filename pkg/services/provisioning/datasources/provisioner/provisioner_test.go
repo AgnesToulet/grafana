@@ -41,14 +41,23 @@ func setupTestEnv(t testing.TB, gitops bool, configPath string) (*DatasourceProv
 	calls := vcsmock.Calls{}
 	vcsMock := vcsmock.VCSServiceMock{Calls: &calls}
 
-	provisioner := NewDatasourceProvisioner(cfg, &vcsMock)
+	var cfgReader datasources.ConfigReader
+	// Override the config reader to use test data and test logger
+	if gitops {
+		cfgReader = configreader.NewVCSConfigReader(logger, &vcsMock)
+	} else {
+		cfgReader = configreader.NewDiskConfigReader(logger, configPath)
+	}
+
+	provisioner := DatasourceProvisioner{
+		Cfg:         cfg,
+		VCS:         &vcsMock,
+		log:         logger,
+		cfgProvider: cfgReader,
+	}
+
 	// Override provisioner's logger
 	provisioner.log = logger
-
-	// Override the config reader to use test data and test logger
-	if !gitops {
-		provisioner.cfgProvider = configreader.NewDiskConfigReader(logger, configPath)
-	}
 
 	return &provisioner, &vcsMock
 }

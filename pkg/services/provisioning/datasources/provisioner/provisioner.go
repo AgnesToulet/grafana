@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
 	"github.com/grafana/grafana/pkg/services/vcs"
@@ -17,38 +18,47 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 )
 
-// Provision scans a directory for provisioning config files
-// and provisions the datasource in those files.
-func (dc *DatasourceProvisioner) Provision(ctx context.Context) error {
-	return dc.applyChanges(ctx)
+// TODO find a way to have the ProvisioningService priority without cyclic import
+func init() {
+	// ProvisioningService priority is Low and since Provision runs upon its
+	// start, we need this service to be initialized before.
+	registry.Register(&registry.Descriptor{
+		Name:         "DatasourceProvisioner",
+		Instance:     &DatasourceProvisioner{},
+		InitPriority: registry.Low + 1,
+	})
 }
 
 // DatasourceProvisioner is responsible for provisioning datasources based on
 // configuration read by the `configReader`
 type DatasourceProvisioner struct {
+	Cfg         *setting.Cfg `inject:""`
+	VCS         vcs.Service  `inject:""`
 	log         log.Logger
-	cfg         *setting.Cfg
 	cfgProvider datasources.ConfigReader
 }
 
-func NewDatasourceProvisioner(cfg *setting.Cfg, vcs vcs.Service) DatasourceProvisioner {
+func (dc *DatasourceProvisioner) Init() error {
 	var configReader datasources.ConfigReader
 
-	logger := log.New("accesscontrol.provisioner")
+	dc.log = log.New("accesscontrol.provisioner")
 
 	// Use feature toggle to read configs from files or Version Control System
-	if gitops, ok := cfg.FeatureToggles["gitops"]; ok && gitops {
-		configReader = configreader.NewVCSConfigReader(logger, vcs)
+	if gitops, ok := dc.Cfg.FeatureToggles["gitops"]; ok && gitops {
+		configReader = configreader.NewVCSConfigReader(dc.log, dc.VCS)
 	} else {
-		configPath := filepath.Join(cfg.ProvisioningPath, "datasources")
-		configReader = configreader.NewDiskConfigReader(logger, configPath)
+		configPath := filepath.Join(dc.Cfg.ProvisioningPath, "datasources")
+		configReader = configreader.NewDiskConfigReader(dc.log, configPath)
 	}
 
-	return DatasourceProvisioner{
-		log:         logger,
-		cfg:         cfg,
-		cfgProvider: configReader,
-	}
+	dc.cfgProvider = configReader
+	return nil
+}
+
+// Provision scans a directory for provisioning config files
+// and provisions the datasource in those files.
+func (dc *DatasourceProvisioner) Provision(ctx context.Context) error {
+	return dc.applyChanges(ctx)
 }
 
 func (dc *DatasourceProvisioner) apply(cfg *datasources.Configs) error {
