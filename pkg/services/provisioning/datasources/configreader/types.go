@@ -1,8 +1,12 @@
 package configreader
 
 import (
+	"fmt"
+
 	"github.com/grafana/grafana/pkg/infra/log"
+	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+	"github.com/grafana/grafana/pkg/services/provisioning/utils"
 	"github.com/grafana/grafana/pkg/services/provisioning/values"
 )
 
@@ -77,6 +81,29 @@ type upsertDataSourceFromConfigV1 struct {
 	UID               values.StringValue    `json:"uid" yaml:"uid"`
 }
 
+func (ds *upsertDataSourceFromConfigV1) mapToUpsertDataSourceFromConfig() *datasources.UpsertDataSourceFromConfig {
+	return &datasources.UpsertDataSourceFromConfig{
+		OrgID:             ds.OrgID.Value(),
+		Name:              ds.Name.Value(),
+		Type:              ds.Type.Value(),
+		Access:            ds.Access.Value(),
+		URL:               ds.URL.Value(),
+		Password:          ds.Password.Value(),
+		User:              ds.User.Value(),
+		Database:          ds.Database.Value(),
+		BasicAuth:         ds.BasicAuth.Value(),
+		BasicAuthUser:     ds.BasicAuthUser.Value(),
+		BasicAuthPassword: ds.BasicAuthPassword.Value(),
+		WithCredentials:   ds.WithCredentials.Value(),
+		IsDefault:         ds.IsDefault.Value(),
+		JSONData:          ds.JSONData.Value(),
+		SecureJSONData:    ds.SecureJSONData.Value(),
+		Editable:          ds.Editable.Value(),
+		Version:           ds.Version.Value(),
+		UID:               ds.UID.Value(),
+	}
+}
+
 func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *datasources.Configs {
 	r := &datasources.Configs{}
 
@@ -87,26 +114,7 @@ func (cfg *configsV1) mapToDatasourceFromConfig(apiVersion int64) *datasources.C
 	}
 
 	for _, ds := range cfg.Datasources {
-		r.Datasources = append(r.Datasources, &datasources.UpsertDataSourceFromConfig{
-			OrgID:             ds.OrgID.Value(),
-			Name:              ds.Name.Value(),
-			Type:              ds.Type.Value(),
-			Access:            ds.Access.Value(),
-			URL:               ds.URL.Value(),
-			Password:          ds.Password.Value(),
-			User:              ds.User.Value(),
-			Database:          ds.Database.Value(),
-			BasicAuth:         ds.BasicAuth.Value(),
-			BasicAuthUser:     ds.BasicAuthUser.Value(),
-			BasicAuthPassword: ds.BasicAuthPassword.Value(),
-			WithCredentials:   ds.WithCredentials.Value(),
-			IsDefault:         ds.IsDefault.Value(),
-			JSONData:          ds.JSONData.Value(),
-			SecureJSONData:    ds.SecureJSONData.Value(),
-			Editable:          ds.Editable.Value(),
-			Version:           ds.Version.Value(),
-			UID:               ds.UID.Value(),
-		})
+		r.Datasources = append(r.Datasources, ds.mapToUpsertDataSourceFromConfig())
 
 		// Using Raw value for the warnings here so that even if it uses env interpolation and the env var is empty
 		// it will still warn
@@ -175,4 +183,54 @@ func (cfg *configsV0) mapToDatasourceFromConfig(apiVersion int64) *datasources.C
 	}
 
 	return r
+}
+
+func validateDefaultUniqueness(logger log.Logger, datasourcesCfg []*datasources.Configs) error {
+	defaultCount := map[int64]int{}
+	for i := range datasourcesCfg {
+		if datasourcesCfg[i].Datasources == nil {
+			continue
+		}
+
+		for _, ds := range datasourcesCfg[i].Datasources {
+			if ds.OrgID == 0 {
+				ds.OrgID = 1
+			}
+
+			if err := validateAccessAndOrgID(logger, ds); err != nil {
+				return fmt.Errorf("failed to provision %q data source: %w", ds.Name, err)
+			}
+
+			if ds.IsDefault {
+				defaultCount[ds.OrgID]++
+				if defaultCount[ds.OrgID] > 1 {
+					return datasources.ErrInvalidConfigToManyDefault
+				}
+			}
+		}
+
+		for _, ds := range datasourcesCfg[i].DeleteDatasources {
+			if ds.OrgID == 0 {
+				ds.OrgID = 1
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateAccessAndOrgID(logger log.Logger, ds *datasources.UpsertDataSourceFromConfig) error {
+	if err := utils.CheckOrgExists(ds.OrgID); err != nil {
+		return err
+	}
+
+	if ds.Access == "" {
+		ds.Access = models.DS_ACCESS_PROXY
+	}
+
+	if ds.Access != models.DS_ACCESS_DIRECT && ds.Access != models.DS_ACCESS_PROXY {
+		logger.Warn("invalid access value, will use 'proxy' instead", "value", ds.Access)
+		ds.Access = models.DS_ACCESS_PROXY
+	}
+	return nil
 }

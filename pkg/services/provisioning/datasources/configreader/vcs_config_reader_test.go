@@ -7,26 +7,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/vcs"
 	"github.com/grafana/grafana/pkg/services/vcs/vcsmock"
 )
 
-// TODO what do we do with typeName and readOnly (expected editable)
-// TODO test with multiple values in latest map? The order won't be guaranteed though.
-
 func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 	tt := []struct {
 		name    string
 		latest  map[string]vcs.VersionedObject
-		configs []*datasources.Configs
+		configs *datasources.Configs
 		wantErr error
 	}{
 		{
 			name:    "should work with empty latest",
 			latest:  nil,
-			configs: []*datasources.Configs{},
+			configs: nil,
 			wantErr: nil,
 		},
 		{
@@ -61,35 +59,33 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 					Timestamp: 0,
 				},
 			},
-			configs: []*datasources.Configs{
-				{
-					APIVersion: 1,
-					Datasources: []*datasources.UpsertDataSourceFromConfig{
-						{
-							OrgID:     1,
-							UID:       "postgresDatasrc",
-							Name:      "PostgreSQL",
-							Type:      "postgres",
-							Access:    "proxy",
-							URL:       "localhost:5432",
-							Password:  "user",
-							User:      "user",
-							Database:  "database",
-							BasicAuth: false,
-							IsDefault: false,
-							Editable:  true,
-							JSONData: map[string]interface{}{
-								"postgresVersion":        float64(903),
-								"sslmode":                "disable",
-								"tlsAuth":                false,
-								"tlsAuthWithCACert":      false,
-								"tlsConfigurationMethod": "file-path",
-								"tlsSkipVerify":          true,
-							},
+			configs: &datasources.Configs{
+				APIVersion: 1,
+				Datasources: []*datasources.UpsertDataSourceFromConfig{
+					{
+						OrgID:     1,
+						UID:       "postgresDatasrc",
+						Name:      "PostgreSQL",
+						Type:      "postgres",
+						Access:    "proxy",
+						URL:       "localhost:5432",
+						Password:  "user",
+						User:      "user",
+						Database:  "database",
+						BasicAuth: false,
+						IsDefault: false,
+						Editable:  true,
+						JSONData: map[string]interface{}{
+							"postgresVersion":        float64(903),
+							"sslmode":                "disable",
+							"tlsAuth":                false,
+							"tlsAuthWithCACert":      false,
+							"tlsConfigurationMethod": "file-path",
+							"tlsSkipVerify":          true,
 						},
 					},
-					DeleteDatasources: nil,
 				},
+				DeleteDatasources: nil,
 			},
 			wantErr: nil,
 		},
@@ -110,39 +106,64 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 						  }`),
 					Timestamp: 0,
 				},
-			},
-			configs: []*datasources.Configs{
-				{
-					APIVersion: 1,
-					Datasources: []*datasources.UpsertDataSourceFromConfig{
-						{
-							OrgID:  2,
-							Name:   "Prometheus",
-							Type:   "prometheus",
-							Access: "proxy",
-							URL:    "localhost:9090",
-							UID:    "prometheusDatasrc",
-						},
-					},
-					DeleteDatasources: nil,
+				"prometheusDatasrc2": {
+					ID:      "prometheusDatasrc2",
+					Version: "test_version",
+					Kind:    vcs.Datasource,
+					Data: []byte(`{
+						    "uid": "prometheusDatasrc2",
+						    "orgId": 2,
+						    "name": "Prometheus",
+						    "type": "prometheus",
+						    "access": "proxy",
+						    "url": "localhost:9090"
+						  }`),
+					Timestamp: 0,
 				},
+			},
+			configs: &datasources.Configs{
+				APIVersion: 1,
+				Datasources: []*datasources.UpsertDataSourceFromConfig{
+					{
+						OrgID:  2,
+						Name:   "Prometheus",
+						Type:   "prometheus",
+						Access: "proxy",
+						URL:    "localhost:9090",
+						UID:    "prometheusDatasrc",
+					},
+					{
+						OrgID:  2,
+						Name:   "Prometheus",
+						Type:   "prometheus",
+						Access: "proxy",
+						URL:    "localhost:9090",
+						UID:    "prometheusDatasrc2",
+					},
+				},
+				DeleteDatasources: nil,
 			},
 			wantErr: nil,
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			// Required for validation to pass
+			bus.ClearBusHandlers()
+			bus.AddHandler("test", mockGetOrg)
+
+			// Setup
 			calls := vcsmock.Calls{}
 			vcsMock := vcsmock.VCSServiceMock{Calls: &calls}
 			vcsMock.LatestFunc = func(c context.Context, k vcs.Kind) (map[string]vcs.VersionedObject, error) {
 				return tc.latest, nil
 			}
-
 			cr := &vcsConfigReader{
 				log: log.New("accesscontrol.provisioner-test"),
 				vcs: &vcsMock,
 			}
 
+			// Test ReadConfigs
 			readCfgs, err := cr.ReadConfigs(context.TODO())
 			if tc.wantErr != nil {
 				require.ErrorIs(t, err, tc.wantErr)
@@ -150,7 +171,17 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			assert.EqualValues(t, tc.configs, readCfgs)
+			if tc.configs == nil {
+				require.Len(t, readCfgs, 0)
+				return
+			}
+
+			require.Len(t, readCfgs, 1)
+			assert.Equal(t, tc.configs.APIVersion, readCfgs[0].APIVersion)
+			for _, ds := range tc.configs.Datasources {
+				assert.Contains(t, readCfgs[0].Datasources, ds)
+			}
+			assert.Len(t, tc.configs.DeleteDatasources, 0)
 		})
 	}
 }
