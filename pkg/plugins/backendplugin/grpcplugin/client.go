@@ -91,7 +91,7 @@ func NewRendererPlugin(pluginID, executablePath string, startFn StartRendererFun
 	})
 }
 
-// NewVCSPlugin creates a new versioned control storage plugin factory used for registering a backend renderer plugin.
+// NewVCSPlugin creates a new versioned control storage plugin factory used for registering a vcs plugin.
 func NewVCSPlugin(pluginID, executablePath string, startFn StartVCSFunc) backendplugin.PluginFactoryFunc {
 	return newPlugin(PluginDescriptor{
 		pluginID:       pluginID,
