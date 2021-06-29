@@ -1,0 +1,44 @@
+syntax = "proto3";
+package vcs;
+
+option go_package = "./;vcsplugin";
+
+message VersionedObject {
+    string id = 1;
+    string version = 2;
+    string kind = 3;
+    bytes data = 4;
+    int64 timestamp = 5;
+}
+
+message StoreRequest {
+    VersionedObject versionedObject = 1;
+}
+
+message StoreResponse {
+    string message = 1;
+}
+
+message LatestRequest {
+    string kind = 1;
+}
+
+message LatestResponse {
+    map<string, VersionedObject> latestVersionedObjects = 1;
+}
+
+message HistoryRequest {
+    string kind = 1;
+    string id = 2;
+}
+
+message HistoryResponse {
+    repeated VersionedObject versionedObjects = 1;
+}
+
+service VersionedStorage {
+    rpc Store(StoreRequest) returns (StoreResponse);
+    rpc Latest(LatestRequest) returns (LatestResponse);
+    rpc History(HistoryRequest) returns (HistoryResponse);
+}
+  
