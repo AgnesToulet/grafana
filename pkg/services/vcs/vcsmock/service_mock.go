@@ -1,10 +1,12 @@
-package vcs
+package vcsmock
 
 import (
 	"context"
+
+	"github.com/grafana/grafana/pkg/services/vcs"
 )
 
-var _ Service = &VCSServiceMock{}
+var _ vcs.Service = &VCSServiceMock{}
 
 type Calls struct {
 	Store   []interface{}
@@ -15,12 +17,12 @@ type Calls struct {
 // VCSServiceMock is a mock implementation of the VCS Service
 type VCSServiceMock struct {
 	Calls       *Calls
-	StoreFunc   func(context.Context, VersionedObject) error
-	LatestFunc  func(context.Context, Kind) (map[string]VersionedObject, error)
-	HistoryFunc func(context.Context, Kind, string) ([]VersionedObject, error)
+	StoreFunc   func(context.Context, vcs.VersionedObject) error
+	LatestFunc  func(context.Context, vcs.Kind) (map[string]vcs.VersionedObject, error)
+	HistoryFunc func(context.Context, vcs.Kind, string) ([]vcs.VersionedObject, error)
 }
 
-func (m *VCSServiceMock) Store(ctx context.Context, vObj VersionedObject) error {
+func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) error {
 	m.Calls.Store = append(m.Calls.Store, []interface{}{ctx, vObj})
 	if m.StoreFunc != nil {
 		return m.StoreFunc(ctx, vObj)
@@ -28,7 +30,7 @@ func (m *VCSServiceMock) Store(ctx context.Context, vObj VersionedObject) error 
 	return nil
 }
 
-func (m *VCSServiceMock) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
+func (m *VCSServiceMock) Latest(ctx context.Context, kind vcs.Kind) (map[string]vcs.VersionedObject, error) {
 	m.Calls.Latest = append(m.Calls.Latest, []interface{}{ctx, kind})
 	if m.LatestFunc != nil {
 		return m.LatestFunc(ctx, kind)
@@ -36,7 +38,7 @@ func (m *VCSServiceMock) Latest(ctx context.Context, kind Kind) (map[string]Vers
 	return nil, nil
 }
 
-func (m *VCSServiceMock) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+func (m *VCSServiceMock) History(ctx context.Context, kind vcs.Kind, ID string) ([]vcs.VersionedObject, error) {
 	m.Calls.History = append(m.Calls.History, []interface{}{ctx, kind, ID})
 	if m.HistoryFunc != nil {
 		return m.HistoryFunc(ctx, kind, ID)
