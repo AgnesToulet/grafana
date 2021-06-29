@@ -18,6 +18,6 @@ type VersionedObject struct {
 
 type Service interface {
 	Store(context.Context, VersionedObject) error
-	Latest(context.Context, Kind) map[string]VersionedObject
-	History(context.Context, Kind, string) []VersionedObject
+	Latest(context.Context, Kind) (map[string]VersionedObject, error)
+	History(context.Context, Kind, string) ([]VersionedObject, error)
 }
