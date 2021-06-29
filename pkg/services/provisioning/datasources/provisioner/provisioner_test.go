@@ -4,6 +4,10 @@ import (
 	"context"
 	"testing"
 
+	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
@@ -12,10 +16,6 @@ import (
 	"github.com/grafana/grafana/pkg/services/vcs"
 	"github.com/grafana/grafana/pkg/services/vcs/vcsmock"
 	"github.com/grafana/grafana/pkg/setting"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 var (

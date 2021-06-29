@@ -8,11 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/utils"
-	"gopkg.in/yaml.v2"
 )
 
 type diskConfigReader struct {
@@ -64,27 +65,27 @@ func (cr *diskConfigReader) parseDatasourceConfig(path string, file os.FileInfo)
 		return nil, err
 	}
 
-	var apiVersion *datasources.ConfigVersion
+	var apiVersion *configVersion
 	err = yaml.Unmarshal(yamlFile, &apiVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	if apiVersion == nil {
-		apiVersion = &datasources.ConfigVersion{APIVersion: 0}
+		apiVersion = &configVersion{APIVersion: 0}
 	}
 
 	if apiVersion.APIVersion > 0 {
-		v1 := &datasources.ConfigsV1{Log: cr.log}
+		v1 := &configsV1{Log: cr.log}
 		err = yaml.Unmarshal(yamlFile, v1)
 		if err != nil {
 			return nil, err
 		}
 
-		return v1.MapToDatasourceFromConfig(apiVersion.APIVersion), nil
+		return v1.mapToDatasourceFromConfig(apiVersion.APIVersion), nil
 	}
 
-	var v0 *datasources.ConfigsV0
+	var v0 *configsV0
 	err = yaml.Unmarshal(yamlFile, &v0)
 	if err != nil {
 		return nil, err
@@ -92,7 +93,7 @@ func (cr *diskConfigReader) parseDatasourceConfig(path string, file os.FileInfo)
 
 	cr.log.Warn("[Deprecated] the datasource provisioning config is outdated. please upgrade", "filename", filename)
 
-	return v0.MapToDatasourceFromConfig(apiVersion.APIVersion), nil
+	return v0.mapToDatasourceFromConfig(apiVersion.APIVersion), nil
 }
 
 func (cr *diskConfigReader) validateDefaultUniqueness(datasourcesCfg []*datasources.Configs) error {

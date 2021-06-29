@@ -6,16 +6,13 @@ import (
 	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/infra/log"
+	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
 	"github.com/grafana/grafana/pkg/services/provisioning/datasources/configreader"
 	"github.com/grafana/grafana/pkg/services/vcs"
-
 	"github.com/grafana/grafana/pkg/setting"
-
-	"github.com/grafana/grafana/pkg/infra/log"
-
-	"github.com/grafana/grafana/pkg/models"
 )
 
 // TODO find a way to have the ProvisioningService priority without cyclic import
@@ -75,13 +72,13 @@ func (dc *DatasourceProvisioner) apply(cfg *datasources.Configs) error {
 
 		if errors.Is(err, models.ErrDataSourceNotFound) {
 			dc.log.Info("inserting datasource from configuration ", "name", ds.Name, "uid", ds.UID)
-			insertCmd := datasources.CreateInsertCommand(ds)
+			insertCmd := createInsertCommand(ds)
 			if err := bus.Dispatch(insertCmd); err != nil {
 				return err
 			}
 		} else {
 			dc.log.Debug("updating datasource from configuration", "name", ds.Name, "uid", ds.UID)
-			updateCmd := datasources.CreateUpdateCommand(ds, cmd.Result.Id)
+			updateCmd := createUpdateCommand(ds, cmd.Result.Id)
 			if err := bus.Dispatch(updateCmd); err != nil {
 				return err
 			}
