@@ -257,7 +257,6 @@ func TestProvisionFromVCS(t *testing.T) {
 						    "orgId": 1,
 						    "name": "PostgreSQL",
 						    "type": "postgres",
-						    "typeName": "PostgreSQL",
 						    "access": "proxy",
 						    "url": "localhost:5432",
 						    "password": "user",
@@ -265,6 +264,7 @@ func TestProvisionFromVCS(t *testing.T) {
 						    "database": "database",
 						    "basicAuth": false,
 						    "isDefault": false,
+						    "editable": true,
 						    "jsonData": {
 						      "postgresVersion": 903,
 						      "sslmode": "disable",
@@ -272,8 +272,7 @@ func TestProvisionFromVCS(t *testing.T) {
 						      "tlsAuthWithCACert": false,
 						      "tlsConfigurationMethod": "file-path",
 						      "tlsSkipVerify": true
-						    },
-						    "readOnly": false
+						    }
 						  }`),
 					Timestamp: 0,
 				},

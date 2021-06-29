@@ -41,7 +41,6 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 						    "orgId": 1,
 						    "name": "PostgreSQL",
 						    "type": "postgres",
-						    "typeName": "PostgreSQL",
 						    "access": "proxy",
 						    "url": "localhost:5432",
 						    "password": "user",
@@ -49,6 +48,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 						    "database": "database",
 						    "basicAuth": false,
 						    "isDefault": false,
+						    "editable": true,
 						    "jsonData": {
 						      "postgresVersion": 903,
 						      "sslmode": "disable",
@@ -56,8 +56,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 						      "tlsAuthWithCACert": false,
 						      "tlsConfigurationMethod": "file-path",
 						      "tlsSkipVerify": true
-						    },
-						    "readOnly": false
+						    }
 						  }`),
 					Timestamp: 0,
 				},
@@ -68,6 +67,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 					Datasources: []*datasources.UpsertDataSourceFromConfig{
 						{
 							OrgID:     1,
+							UID:       "postgresDatasrc",
 							Name:      "PostgreSQL",
 							Type:      "postgres",
 							Access:    "proxy",
@@ -77,6 +77,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 							Database:  "database",
 							BasicAuth: false,
 							IsDefault: false,
+							Editable:  true,
 							JSONData: map[string]interface{}{
 								"postgresVersion":        float64(903),
 								"sslmode":                "disable",
@@ -85,7 +86,6 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 								"tlsConfigurationMethod": "file-path",
 								"tlsSkipVerify":          true,
 							},
-							UID: "postgresDatasrc",
 						},
 					},
 					DeleteDatasources: nil,
