@@ -1,6 +1,7 @@
 package diskconfigreader
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,7 +25,7 @@ func NewConfigReader(log log.Logger, configPath string) configreader.ConfigReade
 	return &configReader{log: log, configPath: configPath}
 }
 
-func (cr *configReader) ReadConfigs() ([]*datasources.Configs, error) {
+func (cr *configReader) ReadConfigs(_ context.Context) ([]*datasources.Configs, error) {
 	var datasources []*datasources.Configs
 
 	files, err := ioutil.ReadDir(cr.configPath)

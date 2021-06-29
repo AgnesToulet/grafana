@@ -1,7 +1,11 @@
 package configreader
 
-import "github.com/grafana/grafana/pkg/services/provisioning/datasources"
+import (
+	"context"
+
+	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+)
 
 type ConfigReader interface {
-	ReadConfigs() ([]*datasources.Configs, error)
+	ReadConfigs(context.Context) ([]*datasources.Configs, error)
 }

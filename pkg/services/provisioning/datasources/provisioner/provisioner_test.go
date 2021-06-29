@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/grafana/grafana/pkg/bus"
@@ -56,7 +57,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("apply default values when missing", func() {
 			dc := setupTestEnv(t, false, withoutDefaults)
-			err := dc.applyChanges()
+			err := dc.applyChanges(context.TODO())
 			if err != nil {
 				t.Fatalf("applyChanges return an error %v", err)
 			}
@@ -69,7 +70,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 		Convey("One configured datasource", func() {
 			Convey("no datasource in database", func() {
 				dc := setupTestEnv(t, false, twoDatasourcesConfig)
-				err := dc.applyChanges()
+				err := dc.applyChanges(context.TODO())
 				if err != nil {
 					t.Fatalf("applyChanges return an error %v", err)
 				}
@@ -86,7 +87,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 				Convey("should update one datasource", func() {
 					dc := setupTestEnv(t, false, twoDatasourcesConfig)
-					err := dc.applyChanges()
+					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
 					}
@@ -99,7 +100,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 			Convey("Two datasources with is_default", func() {
 				dc := setupTestEnv(t, false, doubleDatasourcesConfig)
-				err := dc.applyChanges()
+				err := dc.applyChanges(context.TODO())
 				Convey("should raise error", func() {
 					So(err, ShouldEqual, datasources.ErrInvalidConfigToManyDefault)
 				})
@@ -108,7 +109,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 		Convey("Multiple datasources in different organizations with isDefault in each organization", func() {
 			dc := setupTestEnv(t, false, multipleOrgsWithDefault)
-			err := dc.applyChanges()
+			err := dc.applyChanges(context.TODO())
 			Convey("should not raise error", func() {
 				So(err, ShouldBeNil)
 				So(len(fakeRepo.inserted), ShouldEqual, 4)
@@ -128,7 +129,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 				Convey("should have two new datasources", func() {
 					dc := setupTestEnv(t, false, twoDatasourcesConfigPurgeOthers)
-					err := dc.applyChanges()
+					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
 					}
@@ -149,7 +150,7 @@ func TestDatasourceAsConfig(t *testing.T) {
 
 				Convey("should have two new datasources", func() {
 					dc := setupTestEnv(t, false, twoDatasourcesConfig)
-					err := dc.applyChanges()
+					err := dc.applyChanges(context.TODO())
 					if err != nil {
 						t.Fatalf("applyChanges return an error %v", err)
 					}

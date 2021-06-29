@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 
@@ -18,8 +19,8 @@ import (
 
 // Provision scans a directory for provisioning config files
 // and provisions the datasource in those files.
-func (dc *DatasourceProvisioner) Provision() error {
-	return dc.applyChanges()
+func (dc *DatasourceProvisioner) Provision(ctx context.Context) error {
+	return dc.applyChanges(ctx)
 }
 
 // DatasourceProvisioner is responsible for provisioning datasources based on
@@ -70,8 +71,8 @@ func (dc *DatasourceProvisioner) apply(cfg *datasources.Configs) error {
 	return nil
 }
 
-func (dc *DatasourceProvisioner) applyChanges() error {
-	configs, err := dc.cfgProvider.ReadConfigs()
+func (dc *DatasourceProvisioner) applyChanges(ctx context.Context) error {
+	configs, err := dc.cfgProvider.ReadConfigs(ctx)
 	if err != nil {
 		return err
 	}

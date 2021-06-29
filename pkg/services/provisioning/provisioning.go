@@ -69,7 +69,7 @@ type provisioningServiceImpl struct {
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
 	dashboardProvisioner    dashboards.DashboardProvisioner
 	provisionNotifiers      func(string) error
-	provisionDatasources    func() error
+	provisionDatasources    func(context.Context) error
 	provisionPlugins        func(string, plugifaces.Manager) error
 	mutex                   sync.Mutex
 }
@@ -130,7 +130,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDatasources() error {
-	err := ps.provisionDatasources()
+	err := ps.provisionDatasources(context.TODO())
 	return errutil.Wrap("Datasource provisioning error", err)
 }
 
