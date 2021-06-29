@@ -52,7 +52,7 @@ func newClientV2(descriptor PluginDescriptor, logger log.Logger, rpcClient plugi
 		return nil, err
 	}
 
-	rawVCS, err := rpcClient.Dispense("versionedstorage")
+	rawVCS, err := rpcClient.Dispense("vcs")
 	if err != nil {
 		return nil, err
 	}
