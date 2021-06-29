@@ -18,6 +18,7 @@ func NewVCSConfigReader(log log.Logger, vcs vcs.Service) datasources.ConfigReade
 	return &vcsConfigReader{log: log, vcs: vcs}
 }
 
+//TODO add validation functions
 func (cr *vcsConfigReader) ReadConfigs(ctx context.Context) ([]*datasources.Configs, error) {
 	configs := []*datasources.Configs{}
 	datasourcesMap, err := cr.vcs.Latest(ctx, vcs.Datasource)

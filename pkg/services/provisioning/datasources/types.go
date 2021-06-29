@@ -9,6 +9,8 @@ import (
 	"github.com/grafana/grafana/pkg/services/provisioning/values"
 )
 
+//TODO move versioned type to config reader and make them private
+
 type ConfigReader interface {
 	ReadConfigs(context.Context) ([]*Configs, error)
 }
