@@ -4,8 +4,7 @@ import (
 	"context"
 )
 
-//TODO move versioned type to config reader and make them private
-
+//ConfigReader reads datasource config files from storage
 type ConfigReader interface {
 	ReadConfigs(context.Context) ([]*Configs, error)
 }
