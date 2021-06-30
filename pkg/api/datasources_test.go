@@ -157,13 +157,7 @@ func TestVCSStoreDataSource(t *testing.T) {
 	require.True(t, ok, "expected second parameter of vcs Store call to be a VersionedObject")
 	assert.NotEmpty(t, vObj.ID, "expected versioned object ID to be set to datasource UID")
 
-	// TODO make the conversion better
-	type ProvisionDatasourcesDTO struct {
-		models.DataSource
-		Editable bool `json:"editable"`
-	}
-	var ds ProvisionDatasourcesDTO
-
+	var ds models.DataSource
 	err := json.Unmarshal(vObj.Data, &ds)
 	require.NoError(t, err)
 	assert.Equal(t, addCmd.Name, ds.Name, "expected vobj name to be correctly set")

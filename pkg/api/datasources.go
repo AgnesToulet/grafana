@@ -243,18 +243,7 @@ func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSo
 		return nil
 	}
 
-	// TODO make the conversion better
-	type ProvisionDatasourcesDTO struct {
-		models.DataSource
-		Editable bool `json:"editable"`
-	}
-
-	modifiedDs := ProvisionDatasourcesDTO{
-		DataSource: ds,
-		Editable:   !ds.ReadOnly,
-	}
-
-	dsJson, err := json.Marshal(modifiedDs)
+	dsJson, err := json.Marshal(ds)
 	if err != nil {
 		return err
 	}
