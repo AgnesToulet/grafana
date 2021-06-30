@@ -9,7 +9,7 @@ import (
 	plugifaces "github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
-	"github.com/grafana/grafana/pkg/services/provisioning/datasources"
+	datasources "github.com/grafana/grafana/pkg/services/provisioning/datasources/provisioner"
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
 	"github.com/grafana/grafana/pkg/services/provisioning/plugins"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
@@ -42,7 +42,6 @@ func NewProvisioningServiceImpl() *provisioningServiceImpl {
 		log:                     log.New("provisioning"),
 		newDashboardProvisioner: dashboards.New,
 		provisionNotifiers:      notifiers.Provision,
-		provisionDatasources:    datasources.Provision,
 		provisionPlugins:        plugins.Provision,
 	}
 }
@@ -51,28 +50,26 @@ func NewProvisioningServiceImpl() *provisioningServiceImpl {
 func newProvisioningServiceImpl(
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory,
 	provisionNotifiers func(string) error,
-	provisionDatasources func(string) error,
 	provisionPlugins func(string, plugifaces.Manager) error,
 ) *provisioningServiceImpl {
 	return &provisioningServiceImpl{
 		log:                     log.New("provisioning"),
 		newDashboardProvisioner: newDashboardProvisioner,
 		provisionNotifiers:      provisionNotifiers,
-		provisionDatasources:    provisionDatasources,
 		provisionPlugins:        provisionPlugins,
 	}
 }
 
 type provisioningServiceImpl struct {
-	Cfg                     *setting.Cfg       `inject:""`
-	SQLStore                *sqlstore.SQLStore `inject:""`
-	PluginManager           plugifaces.Manager `inject:""`
+	Cfg                     *setting.Cfg                       `inject:""`
+	SQLStore                *sqlstore.SQLStore                 `inject:""`
+	PluginManager           plugifaces.Manager                 `inject:""`
+	DatasrcProvisioner      *datasources.DatasourceProvisioner `inject:""`
 	log                     log.Logger
 	pollingCtxCancel        context.CancelFunc
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
 	dashboardProvisioner    dashboards.DashboardProvisioner
 	provisionNotifiers      func(string) error
-	provisionDatasources    func(string) error
 	provisionPlugins        func(string, plugifaces.Manager) error
 	mutex                   sync.Mutex
 }
@@ -130,8 +127,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDatasources() error {
-	datasourcePath := filepath.Join(ps.Cfg.ProvisioningPath, "datasources")
-	err := ps.provisionDatasources(datasourcePath)
+	err := ps.DatasrcProvisioner.Provision(context.TODO())
 	return errutil.Wrap("Datasource provisioning error", err)
 }
 
