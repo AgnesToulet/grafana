@@ -95,8 +95,9 @@ func TestAddDataSource_InvalidURL(t *testing.T) {
 }
 
 func TestVCSStoreDataSource(t *testing.T) {
-	defer bus.ClearBusHandlers()
+	t.Cleanup(bus.ClearBusHandlers)
 
+	// Init db, vcs, hs, sc
 	db := sqlstore.InitTestDB(t)
 	cfg := setting.NewCfg()
 	cfg.FeatureToggles = map[string]bool{"gitops": true}
@@ -108,8 +109,10 @@ func TestVCSStoreDataSource(t *testing.T) {
 		SQLStore: db,
 		VCS:      &vcsMock,
 	}
-
 	sc := setupScenarioContext(t, "/api/datasources")
+
+	// Add the default handler in case it has been removed by other tests
+	bus.AddHandler("sql", sqlstore.AddDataSource)
 
 	addCmd := models.AddDataSourceCommand{
 		Name:           "PostgresDatasrc",
