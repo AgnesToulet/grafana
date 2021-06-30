@@ -225,7 +225,7 @@ func (hs *HTTPServer) AddDataSource(c *models.ReqContext, cmd models.AddDataSour
 		return response.Error(500, "Failed to add datasource", err)
 	}
 
-	if err := hs.StoreDataSourceInVCS(context.TODO(), *cmd.Result); err != nil {
+	if err := hs.StoreDataSourceInVCS(c.Req.Context(), *cmd.Result); err != nil {
 		hs.log.Warn("could not store datasource in VCS", err)
 	}
 
@@ -292,7 +292,7 @@ func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDa
 		return response.Error(500, "Failed to query datasource", err)
 	}
 
-	if err := hs.StoreDataSourceInVCS(context.TODO(), *query.Result); err != nil {
+	if err := hs.StoreDataSourceInVCS(c.Req.Context(), *query.Result); err != nil {
 		hs.log.Warn("could not store datasource in VCS", err)
 	}
 
