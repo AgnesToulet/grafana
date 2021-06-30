@@ -53,7 +53,7 @@ func (cr *diskConfigReader) ReadConfigs(_ context.Context) ([]*datasources.Confi
 }
 
 func (cr *diskConfigReader) parseDatasourceConfig(file os.FileInfo) (*datasources.Configs, error) {
-	filename, _ := filepath.Abs(filepath.Join(path, file.Name()))
+	filename, _ := filepath.Abs(filepath.Join(cr.configPath, file.Name()))
 
 	// nolint:gosec
 	// We can ignore the gosec G304 warning on this one because `filename` comes from ps.Cfg.ProvisioningPath
