@@ -149,6 +149,7 @@ func TestVCSStoreDataSource(t *testing.T) {
 		}),
 	)
 
+	// Test and verify
 	sc.fakeReqWithParams("POST", sc.url, map[string]string{}).exec()
 	assert.Equal(t, 200, sc.resp.Code)
 
