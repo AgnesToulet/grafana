@@ -2,6 +2,7 @@ package configreader
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,7 +77,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 						IsDefault: false,
 						Editable:  true,
 						JSONData: map[string]interface{}{
-							"postgresVersion":        float64(903),
+							"postgresVersion":        json.Number("903"),
 							"sslmode":                "disable",
 							"tlsAuth":                false,
 							"tlsAuthWithCACert":      false,
@@ -125,20 +126,22 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 				APIVersion: 1,
 				Datasources: []*datasources.UpsertDataSourceFromConfig{
 					{
-						OrgID:  2,
-						Name:   "Prometheus",
-						Type:   "prometheus",
-						Access: "proxy",
-						URL:    "localhost:9090",
-						UID:    "prometheusDatasrc",
+						OrgID:    2,
+						Name:     "Prometheus",
+						Type:     "prometheus",
+						Access:   "proxy",
+						URL:      "localhost:9090",
+						UID:      "prometheusDatasrc",
+						Editable: true, // TODO double check if this is what we want (default to true)
 					},
 					{
-						OrgID:  2,
-						Name:   "Prometheus",
-						Type:   "prometheus",
-						Access: "proxy",
-						URL:    "localhost:9090",
-						UID:    "prometheusDatasrc2",
+						OrgID:    2,
+						Name:     "Prometheus",
+						Type:     "prometheus",
+						Access:   "proxy",
+						URL:      "localhost:9090",
+						UID:      "prometheusDatasrc2",
+						Editable: true,
 					},
 				},
 				DeleteDatasources: nil,
@@ -178,6 +181,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 
 			require.Len(t, readCfgs, 1)
 			assert.Equal(t, tc.configs.APIVersion, readCfgs[0].APIVersion)
+
 			for _, ds := range tc.configs.Datasources {
 				assert.Contains(t, readCfgs[0].Datasources, ds)
 			}
