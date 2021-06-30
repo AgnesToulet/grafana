@@ -33,7 +33,7 @@ func (cr *diskConfigReader) ReadConfigs(_ context.Context) ([]*datasources.Confi
 
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".yaml") || strings.HasSuffix(file.Name(), ".yml") {
-			datasource, err := cr.parseDatasourceConfig(cr.configPath, file)
+			datasource, err := cr.parseDatasourceConfig(file)
 			if err != nil {
 				return nil, err
 			}
