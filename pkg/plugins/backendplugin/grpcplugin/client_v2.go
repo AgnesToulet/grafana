@@ -52,6 +52,11 @@ func newClientV2(descriptor PluginDescriptor, logger log.Logger, rpcClient plugi
 		return nil, err
 	}
 
+	rawVCS, err := rpcClient.Dispense("vcs")
+	if err != nil {
+		return nil, err
+	}
+
 	c := clientV2{}
 	if rawDiagnostics != nil {
 		if diagnosticsClient, ok := rawDiagnostics.(grpcplugin.DiagnosticsClient); ok {
@@ -85,6 +90,19 @@ func newClientV2(descriptor PluginDescriptor, logger log.Logger, rpcClient plugi
 
 	if descriptor.startRendererFn != nil {
 		if err := descriptor.startRendererFn(descriptor.pluginID, c.RendererPlugin, logger); err != nil {
+			return nil, err
+		}
+	}
+
+	var vcsPlugin pluginextensionv2.VCSPlugin
+	if rawVCS != nil {
+		if plugin, ok := rawVCS.(pluginextensionv2.VCSPlugin); ok {
+			vcsPlugin = plugin
+		}
+	}
+
+	if descriptor.startVCSFn != nil {
+		if err := descriptor.startVCSFn(descriptor.pluginID, vcsPlugin, logger); err != nil {
 			return nil, err
 		}
 	}

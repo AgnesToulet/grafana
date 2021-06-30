@@ -11,6 +11,8 @@ import (
 type Manager interface {
 	// Renderer gets the renderer plugin.
 	Renderer() *RendererPlugin
+	// VersionedControlStorage gets the vcs plugin.
+	VersionedControlStorage() *VCSPlugin
 	// GetDataSource gets a data source plugin with a certain ID.
 	GetDataSource(id string) *DataSourcePlugin
 	// GetPlugin gets a plugin with a certain ID.
