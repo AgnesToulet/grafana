@@ -38,7 +38,7 @@ type DatasourceProvisioner struct {
 func (dc *DatasourceProvisioner) Init() error {
 	var configReader datasources.ConfigReader
 
-	dc.log = log.New("accesscontrol.provisioner")
+	dc.log = log.New("datasources.provisioner")
 
 	// Use feature toggle to read configs from files or Version Control System
 	if gitops, ok := dc.Cfg.FeatureToggles["gitops"]; ok && gitops {
