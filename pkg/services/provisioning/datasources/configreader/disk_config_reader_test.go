@@ -16,10 +16,10 @@ import (
 var (
 	logger log.Logger = log.New("fake.log")
 
-	allProperties = "disktestdata/all-properties"
-	versionZero   = "disktestdata/version-0"
-	brokenYaml    = "disktestdata/broken-yaml"
-	invalidAccess = "disktestdata/invalid-access"
+	allProperties = "testdata/all-properties"
+	versionZero   = "testdata/version-0"
+	brokenYaml    = "testdata/broken-yaml"
+	invalidAccess = "testdata/invalid-access"
 )
 
 func TestDatasourceAsConfig(t *testing.T) {

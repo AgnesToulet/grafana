@@ -21,11 +21,11 @@ import (
 var (
 	logger log.Logger = log.New("fake.log")
 
-	twoDatasourcesConfig            = "../configreader/disktestdata/two-datasources"
-	twoDatasourcesConfigPurgeOthers = "../configreader/disktestdata/insert-two-delete-two"
-	doubleDatasourcesConfig         = "../configreader/disktestdata/double-default"
-	multipleOrgsWithDefault         = "../configreader/disktestdata/multiple-org-default"
-	withoutDefaults                 = "../configreader/disktestdata/appliedDefaults"
+	twoDatasourcesConfig            = "../configreader/testdata/two-datasources"
+	twoDatasourcesConfigPurgeOthers = "../configreader/testdata/insert-two-delete-two"
+	doubleDatasourcesConfig         = "../configreader/testdata/double-default"
+	multipleOrgsWithDefault         = "../configreader/testdata/multiple-org-default"
+	withoutDefaults                 = "../configreader/testdata/appliedDefaults"
 
 	fakeRepo *fakeRepository
 )
