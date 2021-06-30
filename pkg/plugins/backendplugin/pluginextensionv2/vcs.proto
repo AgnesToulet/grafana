@@ -1,7 +1,7 @@
 syntax = "proto3";
-package vcs;
+package pluginextensionv2;
 
-option go_package = "./;vcsplugin";
+option go_package = "./;pluginextensionv2";
 
 message VersionedObject {
     string id = 1;
@@ -16,7 +16,7 @@ message StoreRequest {
 }
 
 message StoreResponse {
-    string message = 1;
+    string error = 1;
 }
 
 message LatestRequest {
@@ -24,7 +24,8 @@ message LatestRequest {
 }
 
 message LatestResponse {
-    map<string, VersionedObject> latestVersionedObjects = 1;
+    string error = 1;
+    map<string, VersionedObject> latestVersionedObjects = 2;
 }
 
 message HistoryRequest {
@@ -33,7 +34,8 @@ message HistoryRequest {
 }
 
 message HistoryResponse {
-    repeated VersionedObject versionedObjects = 1;
+    string error = 1;
+    repeated VersionedObject versionedObjects = 2;
 }
 
 service VersionedStorage {

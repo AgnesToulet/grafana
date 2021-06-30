@@ -66,13 +66,14 @@ type PluginManager struct {
 	grafanaHasUpdate              bool
 	pluginScanningErrors          map[string]plugins.PluginError
 
-	renderer     *plugins.RendererPlugin
-	dataSources  map[string]*plugins.DataSourcePlugin
-	plugins      map[string]*plugins.PluginBase
-	panels       map[string]*plugins.PanelPlugin
-	apps         map[string]*plugins.AppPlugin
-	staticRoutes []*plugins.PluginStaticRoute
-	pluginsMu    sync.RWMutex
+	renderer                *plugins.RendererPlugin
+	versionedControlStorage *plugins.VCSPlugin
+	dataSources             map[string]*plugins.DataSourcePlugin
+	plugins                 map[string]*plugins.PluginBase
+	panels                  map[string]*plugins.PanelPlugin
+	apps                    map[string]*plugins.AppPlugin
+	staticRoutes            []*plugins.PluginStaticRoute
+	pluginsMu               sync.RWMutex
 }
 
 func init() {
@@ -172,6 +173,12 @@ func (pm *PluginManager) initExternalPlugins() error {
 		staticRoutes := pm.renderer.InitFrontendPlugin(pm.Cfg)
 		staticRoutesList = append(staticRoutesList, staticRoutes...)
 	}
+
+	if pm.VersionedControlStorage() != nil {
+		staticRoutes := pm.versionedControlStorage.InitFrontendPlugin(pm.Cfg)
+		staticRoutesList = append(staticRoutesList, staticRoutes...)
+	}
+
 	pm.staticRoutes = staticRoutesList
 
 	for _, p := range pm.Plugins() {
@@ -208,6 +215,13 @@ func (pm *PluginManager) Renderer() *plugins.RendererPlugin {
 	defer pm.pluginsMu.RUnlock()
 
 	return pm.renderer
+}
+
+func (pm *PluginManager) VersionedControlStorage() *plugins.VCSPlugin {
+	pm.pluginsMu.RLock()
+	defer pm.pluginsMu.RUnlock()
+
+	return pm.versionedControlStorage
 }
 
 func (pm *PluginManager) GetDataSource(id string) *plugins.DataSourcePlugin {
@@ -378,6 +392,7 @@ func (pm *PluginManager) scan(pluginDir string, requireSigned bool) error {
 		"datasource": plugins.DataSourcePlugin{},
 		"app":        plugins.AppPlugin{},
 		"renderer":   plugins.RendererPlugin{},
+		"vcs":        plugins.VCSPlugin{},
 	}
 
 	// 2nd pass: Validate and register plugins
@@ -488,6 +503,9 @@ func (pm *PluginManager) loadPlugin(jsonParser *json.Decoder, pluginBase *plugin
 		pb = &p.PluginBase
 	case *plugins.AppPlugin:
 		pm.apps[p.Id] = p
+		pb = &p.PluginBase
+	case *plugins.VCSPlugin:
+		pm.versionedControlStorage = p
 		pb = &p.PluginBase
 	default:
 		panic(fmt.Sprintf("Unrecognized plugin type %T", plug))
@@ -802,6 +820,8 @@ func (pm *PluginManager) unregister(plugin *plugins.PluginBase) error {
 		delete(pm.apps, plugin.Id)
 	case "renderer":
 		pm.renderer = nil
+	case "vcs":
+		pm.versionedControlStorage = nil
 	}
 
 	delete(pm.plugins, plugin.Id)
