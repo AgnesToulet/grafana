@@ -15,7 +15,6 @@ import (
 	"github.com/grafana/grafana/pkg/setting"
 )
 
-// TODO find a way to have the ProvisioningService priority without cyclic import
 func init() {
 	// ProvisioningService priority is Low and since Provision runs upon its
 	// start, we need this service to be initialized before.
