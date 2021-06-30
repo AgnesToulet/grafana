@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/grafana/grafana/pkg/api/response"
 	"github.com/grafana/grafana/pkg/api/routing"
+	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/components/simplejson"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/services/vcs"
 	"github.com/grafana/grafana/pkg/services/vcs/vcsmock"
 	"github.com/grafana/grafana/pkg/setting"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/grafana/grafana/pkg/bus"
 )
 
 const (
@@ -125,7 +125,7 @@ func TestVCSStoreDataSource(t *testing.T) {
 		Result:         &models.DataSource{},
 		SecureJsonData: nil,
 		JsonData: simplejson.NewFromAny(map[string]interface{}{
-			"postgresVersion":        903,
+			"postgresVersion":        "903",
 			"sslmode":                "disable",
 			"tlsAuth":                false,
 			"tlsAuthWithCACert":      false,
@@ -136,6 +136,12 @@ func TestVCSStoreDataSource(t *testing.T) {
 
 	sc.m.Post(sc.url, routing.Wrap(
 		func(c *models.ReqContext) response.Response {
+			sc.context = c
+			sc.context.SignedInUser = &models.SignedInUser{
+				UserId: testUserID,
+				OrgId:  testOrgID,
+				Login:  testUserLogin,
+			}
 			return hs.AddDataSource(c, addCmd)
 		}),
 	)
@@ -150,6 +156,28 @@ func TestVCSStoreDataSource(t *testing.T) {
 	vObj, ok := storeCall[1].(vcs.VersionedObject)
 	require.True(t, ok, "expected second parameter of vcs Store call to be a VersionedObject")
 	assert.NotEmpty(t, vObj.ID, "expected versioned object ID to be set to datasource UID")
+
+	// TODO make the conversion better
+	type ProvisionDatasourcesDTO struct {
+		models.DataSource
+		Editable bool `json:"editable"`
+	}
+	var ds ProvisionDatasourcesDTO
+
+	err := json.Unmarshal(vObj.Data, &ds)
+	require.NoError(t, err)
+	assert.Equal(t, addCmd.Name, ds.Name, "expected vobj name to be correctly set")
+	assert.Equal(t, addCmd.Type, ds.Type, "expected vobj type to be correctly set")
+	assert.Equal(t, addCmd.Access, ds.Access, "expected vobj access to be correctly set")
+	assert.Equal(t, addCmd.Url, ds.Url, "expected vobj url to be correctly set")
+	assert.Equal(t, addCmd.Database, ds.Database, "expected vobj database to be correctly set")
+	assert.Equal(t, addCmd.User, ds.User, "expected vobj user to be correctly set")
+	assert.Equal(t, addCmd.BasicAuth, ds.BasicAuth, "expected vobj basic auth to be correctly set")
+	assert.Equal(t, addCmd.IsDefault, ds.IsDefault, "expected vobj is default to be correctly set")
+	assert.Equal(t, addCmd.OrgId, ds.OrgId, "expected vobj orgID to be correctly set")
+	assert.Equal(t, addCmd.ReadOnly, ds.ReadOnly, "expected vobj readonly to be correctly set")
+	assert.Len(t, ds.SecureJsonData, 0, "expected obj securejsondata to be empty")
+	assert.EqualValues(t, addCmd.JsonData, ds.JsonData, "expected vobj json data to be correctly set")
 }
 
 // Adding data sources with URLs not specifying protocol should work.
