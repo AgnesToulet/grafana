@@ -6,7 +6,11 @@ import (
 
 	"github.com/grafana/grafana/pkg/api/response"
 	"github.com/grafana/grafana/pkg/api/routing"
+	"github.com/grafana/grafana/pkg/components/simplejson"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
+	"github.com/grafana/grafana/pkg/services/vcs"
+	"github.com/grafana/grafana/pkg/services/vcs/vcsmock"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -70,11 +74,16 @@ func TestDataSourcesProxy_userLoggedIn(t *testing.T) {
 // Adding data sources with invalid URLs should lead to an error.
 func TestAddDataSource_InvalidURL(t *testing.T) {
 	defer bus.ClearBusHandlers()
+	// handler func being tested
+	hs := &HTTPServer{
+		Bus: bus.GetBus(),
+		Cfg: setting.NewCfg(),
+	}
 
 	sc := setupScenarioContext(t, "/api/datasources")
 
 	sc.m.Post(sc.url, routing.Wrap(func(c *models.ReqContext) response.Response {
-		return AddDataSource(c, models.AddDataSourceCommand{
+		return hs.AddDataSource(c, models.AddDataSourceCommand{
 			Name: "Test",
 			Url:  "invalid:url",
 		})
@@ -85,9 +94,71 @@ func TestAddDataSource_InvalidURL(t *testing.T) {
 	assert.Equal(t, 400, sc.resp.Code)
 }
 
+func TestVCSStoreDataSource(t *testing.T) {
+	defer bus.ClearBusHandlers()
+
+	db := sqlstore.InitTestDB(t)
+	cfg := setting.NewCfg()
+	cfg.FeatureToggles = map[string]bool{"gitops": true}
+	calls := vcsmock.Calls{}
+	vcsMock := vcsmock.VCSServiceMock{Calls: &calls}
+	hs := &HTTPServer{
+		Bus:      bus.GetBus(),
+		Cfg:      cfg,
+		SQLStore: db,
+		VCS:      &vcsMock,
+	}
+
+	sc := setupScenarioContext(t, "/api/datasources")
+
+	addCmd := models.AddDataSourceCommand{
+		Name:           "PostgresDatasrc",
+		Type:           "postresql",
+		Access:         "proxy",
+		Url:            "localhost:5432",
+		Database:       "testDatabase",
+		User:           testUserLogin,
+		BasicAuth:      false,
+		IsDefault:      false,
+		OrgId:          testOrgID,
+		ReadOnly:       false,
+		Result:         &models.DataSource{},
+		SecureJsonData: nil,
+		JsonData: simplejson.NewFromAny(map[string]interface{}{
+			"postgresVersion":        903,
+			"sslmode":                "disable",
+			"tlsAuth":                false,
+			"tlsAuthWithCACert":      false,
+			"tlsConfigurationMethod": "file-path",
+			"tlsSkipVerify":          true,
+		}),
+	}
+
+	sc.m.Post(sc.url, routing.Wrap(
+		func(c *models.ReqContext) response.Response {
+			return hs.AddDataSource(c, addCmd)
+		}),
+	)
+
+	sc.fakeReqWithParams("POST", sc.url, map[string]string{}).exec()
+	assert.Equal(t, 200, sc.resp.Code)
+
+	require.Len(t, vcsMock.Calls.Store, 1)
+	storeCall, ok := vcsMock.Calls.Store[0].([]interface{})
+	require.True(t, ok, "expected multiple parameters in vcs Store call")
+	require.Len(t, storeCall, 2, "expected 2 parameters in vcs Store call")
+	vObj, ok := storeCall[1].(vcs.VersionedObject)
+	require.True(t, ok, "expected second parameter of vcs Store call to be a VersionedObject")
+	assert.NotEmpty(t, vObj.ID, "expected versioned object ID to be set to datasource UID")
+}
+
 // Adding data sources with URLs not specifying protocol should work.
 func TestAddDataSource_URLWithoutProtocol(t *testing.T) {
 	defer bus.ClearBusHandlers()
+	hs := &HTTPServer{
+		Bus: bus.GetBus(),
+		Cfg: setting.NewCfg(),
+	}
 
 	const name = "Test"
 	const url = "localhost:5432"
@@ -104,7 +175,7 @@ func TestAddDataSource_URLWithoutProtocol(t *testing.T) {
 	sc := setupScenarioContext(t, "/api/datasources")
 
 	sc.m.Post(sc.url, routing.Wrap(func(c *models.ReqContext) response.Response {
-		return AddDataSource(c, models.AddDataSourceCommand{
+		return hs.AddDataSource(c, models.AddDataSourceCommand{
 			Name: name,
 			Url:  url,
 		})
@@ -118,11 +189,15 @@ func TestAddDataSource_URLWithoutProtocol(t *testing.T) {
 // Updating data sources with invalid URLs should lead to an error.
 func TestUpdateDataSource_InvalidURL(t *testing.T) {
 	defer bus.ClearBusHandlers()
+	hs := &HTTPServer{
+		Bus: bus.GetBus(),
+		Cfg: setting.NewCfg(),
+	}
 
 	sc := setupScenarioContext(t, "/api/datasources/1234")
 
 	sc.m.Put(sc.url, routing.Wrap(func(c *models.ReqContext) response.Response {
-		return AddDataSource(c, models.AddDataSourceCommand{
+		return hs.AddDataSource(c, models.AddDataSourceCommand{
 			Name: "Test",
 			Url:  "invalid:url",
 		})
@@ -136,6 +211,10 @@ func TestUpdateDataSource_InvalidURL(t *testing.T) {
 // Updating data sources with URLs not specifying protocol should work.
 func TestUpdateDataSource_URLWithoutProtocol(t *testing.T) {
 	defer bus.ClearBusHandlers()
+	hs := &HTTPServer{
+		Bus: bus.GetBus(),
+		Cfg: setting.NewCfg(),
+	}
 
 	const name = "Test"
 	const url = "localhost:5432"
@@ -152,7 +231,7 @@ func TestUpdateDataSource_URLWithoutProtocol(t *testing.T) {
 	sc := setupScenarioContext(t, "/api/datasources/1234")
 
 	sc.m.Put(sc.url, routing.Wrap(func(c *models.ReqContext) response.Response {
-		return AddDataSource(c, models.AddDataSourceCommand{
+		return hs.AddDataSource(c, models.AddDataSourceCommand{
 			Name: name,
 			Url:  url,
 		})
