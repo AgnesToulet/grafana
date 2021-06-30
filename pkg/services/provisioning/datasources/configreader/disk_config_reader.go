@@ -52,7 +52,7 @@ func (cr *diskConfigReader) ReadConfigs(_ context.Context) ([]*datasources.Confi
 	return datasources, nil
 }
 
-func (cr *diskConfigReader) parseDatasourceConfig(path string, file os.FileInfo) (*datasources.Configs, error) {
+func (cr *diskConfigReader) parseDatasourceConfig(file os.FileInfo) (*datasources.Configs, error) {
 	filename, _ := filepath.Abs(filepath.Join(path, file.Name()))
 
 	// nolint:gosec
