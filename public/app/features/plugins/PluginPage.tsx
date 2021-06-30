@@ -423,6 +423,8 @@ function getPluginTabsNav(
         });
       }
     }
+    console.log('plugin: ', meta.id);
+    console.log('configPages: ', plugin.configPages);
   }
 
   if (!defaultPage) {
