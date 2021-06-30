@@ -162,7 +162,7 @@ func Test_vcsConfigReader_ReadConfigs(t *testing.T) {
 				return tc.latest, nil
 			}
 			cr := &vcsConfigReader{
-				log: log.New("accesscontrol.provisioner-test"),
+				log: log.New("datasources.provisioner-test"),
 				vcs: &vcsMock,
 			}
 
