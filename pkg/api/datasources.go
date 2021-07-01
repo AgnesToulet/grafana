@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/grafana/grafana/pkg/api/datasource"
 	"github.com/grafana/grafana/pkg/api/dtos"
@@ -249,11 +248,9 @@ func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSo
 	}
 
 	vobj := vcs.VersionedObject{
-		ID:        ds.Uid,
-		Version:   "",
-		Kind:      vcs.Datasource,
-		Data:      dsJson,
-		Timestamp: time.Now().Unix(),
+		ID:   ds.Uid,
+		Kind: vcs.Datasource,
+		Data: dsJson,
 	}
 
 	return hs.VCS.Store(ctx, vobj)
