@@ -20,33 +20,34 @@ type VCSService struct {
 }
 
 func init() {
+	// Start service after Plugin Manager
 	registry.Register(&registry.Descriptor{
 		Name:         ServiceName,
 		Instance:     &VCSService{},
-		InitPriority: registry.High,
+		InitPriority: registry.MediumHigh - 1,
 	})
 }
 
 func (vs *VCSService) Init() error {
 	vs.log = log.New("vcs plugin")
 
-	return nil
-}
-
-func (vs *VCSService) Run(ctx context.Context) error {
 	vs.plugin = vs.PluginManager.VersionedControlStorage()
 
 	if vs.plugin != nil {
-		if err := vs.plugin.Start(ctx); err != nil {
+		if err := vs.plugin.Start(context.Background()); err != nil {
 			return err
 		}
 	}
 
-	<-ctx.Done()
 	return nil
 }
 
 func (vs *VCSService) Store(ctx context.Context, object VersionedObject) error {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil
+	}
+
 	req := &pluginextensionv2.StoreRequest{
 		VersionedObject: toPluginVersionedObject(object),
 	}
@@ -64,6 +65,11 @@ func (vs *VCSService) Store(ctx context.Context, object VersionedObject) error {
 }
 
 func (vs *VCSService) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil, nil
+	}
+
 	req := &pluginextensionv2.LatestRequest{
 		Kind: string(kind),
 	}
@@ -85,6 +91,11 @@ func (vs *VCSService) Latest(ctx context.Context, kind Kind) (map[string]Version
 }
 
 func (vs *VCSService) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil, nil
+	}
+
 	req := &pluginextensionv2.HistoryRequest{
 		Kind: string(kind),
 		Id:   ID,
