@@ -239,7 +239,7 @@ func (hs *HTTPServer) AddDataSource(c *models.ReqContext, cmd models.AddDataSour
 }
 
 func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSource) error {
-	if gitops, ok := hs.Cfg.FeatureToggles["gitops"]; !ok || !gitops {
+	if gitops, ok := hs.Cfg.FeatureToggles["gitops"]; !ok || !gitops || hs.PluginManager.VersionedControlStorage() == nil {
 		return nil
 	}
 
