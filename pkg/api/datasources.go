@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins/adapters"
+	"github.com/grafana/grafana/pkg/services/vcs"
 	"github.com/grafana/grafana/pkg/util"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -207,7 +209,7 @@ func validateURL(tp string, u string) response.Response {
 	return nil
 }
 
-func AddDataSource(c *models.ReqContext, cmd models.AddDataSourceCommand) response.Response {
+func (hs *HTTPServer) AddDataSource(c *models.ReqContext, cmd models.AddDataSourceCommand) response.Response {
 	datasourcesLogger.Debug("Received command to add data source", "url", cmd.Url)
 	cmd.OrgId = c.OrgId
 	if resp := validateURL(cmd.Type, cmd.Url); resp != nil {
@@ -222,6 +224,10 @@ func AddDataSource(c *models.ReqContext, cmd models.AddDataSourceCommand) respon
 		return response.Error(500, "Failed to add datasource", err)
 	}
 
+	if err := hs.StoreDataSourceInVCS(c.Req.Context(), *cmd.Result); err != nil {
+		hs.log.Warn("could not store datasource in VCS", err)
+	}
+
 	ds := convertModelToDtos(cmd.Result)
 	return response.JSON(200, util.DynMap{
 		"message":    "Datasource added",
@@ -229,6 +235,25 @@ func AddDataSource(c *models.ReqContext, cmd models.AddDataSourceCommand) respon
 		"name":       cmd.Result.Name,
 		"datasource": ds,
 	})
+}
+
+func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSource) error {
+	if gitops, ok := hs.Cfg.FeatureToggles["gitops"]; !ok || !gitops || hs.PluginManager.VersionedControlStorage() == nil {
+		return nil
+	}
+
+	dsJson, err := json.Marshal(ds)
+	if err != nil {
+		return err
+	}
+
+	vobj := vcs.VersionedObject{
+		ID:   ds.Uid,
+		Kind: vcs.Datasource,
+		Data: dsJson,
+	}
+
+	return hs.VCS.Store(ctx, vobj)
 }
 
 func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDataSourceCommand) response.Response {
@@ -262,6 +287,10 @@ func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDa
 			return response.Error(404, "Data source not found", nil)
 		}
 		return response.Error(500, "Failed to query datasource", err)
+	}
+
+	if err := hs.StoreDataSourceInVCS(c.Req.Context(), *query.Result); err != nil {
+		hs.log.Warn("could not store datasource in VCS", err)
 	}
 
 	datasourceDTO := convertModelToDtos(query.Result)
