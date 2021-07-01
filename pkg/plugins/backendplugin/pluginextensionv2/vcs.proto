@@ -3,44 +3,105 @@ package pluginextensionv2;
 
 option go_package = "./;pluginextensionv2";
 
+//-----------------------------------------------
+// Common
+//-----------------------------------------------
+
+message AppInstanceSettings {
+  bytes jsonData = 3;
+  map<string, string> decryptedSecureJsonData = 4;
+  int64 lastUpdatedMS = 5;
+}
+
+message DataSourceInstanceSettings {
+  int64 id = 1;
+  string name = 2;
+  string url = 3;
+  string user = 4;
+  string database = 5;
+  bool basicAuthEnabled = 6;
+  string basicAuthUser = 7;
+  bytes jsonData = 8;
+  map<string, string> decryptedSecureJsonData = 9;
+  int64 lastUpdatedMS = 10;
+  string uid = 11;
+}
+
+message User {
+  string login = 1;
+  string name = 2;
+  string email = 3;
+  string role = 4;
+}
+
+message PluginContext {
+  // The Grafana organization id the request originating from.
+  int64 orgId = 1;
+
+  // The unique identifier of the plugin the request  originating from.
+  string pluginId = 2;
+
+  // The Grafana user the request originating from.
+  //
+  // Will not be provided if Grafana backend initiated the request.
+  User user = 3;
+
+  // App plugin instance settings is the configured app instance settings.
+  // In Grafana an app instance is an enabled app plugin in a
+  // Grafana organization.
+  //
+  // Will only be set if request targeting an app instance.
+  AppInstanceSettings appInstanceSettings = 4;
+
+  // Data source instance settings is the configured data source instance
+  // settings. In Grafana a data source instance is a created data source
+  // in a Grafana organization.
+  //
+  // Will only be set if request targeting a data source instance.
+  DataSourceInstanceSettings dataSourceInstanceSettings = 5;
+}
+
 message VersionedObject {
-    string id = 1;
-    string version = 2;
-    string kind = 3;
-    bytes data = 4;
-    int64 timestamp = 5;
+  string id = 1;
+  string version = 2;
+  string kind = 3;
+  bytes data = 4;
+  int64 timestamp = 5;
 }
 
 message StoreRequest {
-    VersionedObject versionedObject = 1;
+  PluginContext pluginContext = 1;
+  VersionedObject versionedObject = 2;
 }
 
 message StoreResponse {
-    string error = 1;
+  string error = 1;
+  VersionedObject versionedObject = 2;
 }
 
 message LatestRequest {
-    string kind = 1;
+  PluginContext pluginContext = 1;
+  string kind = 2;
 }
 
 message LatestResponse {
-    string error = 1;
-    map<string, VersionedObject> latestVersionedObjects = 2;
+  string error = 1;
+  map<string, VersionedObject> latestVersionedObjects = 2;
 }
 
 message HistoryRequest {
-    string kind = 1;
-    string id = 2;
+  PluginContext pluginContext = 1;
+  string kind = 2;
+  string id = 3;
 }
 
 message HistoryResponse {
-    string error = 1;
-    repeated VersionedObject versionedObjects = 2;
+  string error = 1;
+  repeated VersionedObject versionedObjects = 2;
 }
 
 service VersionedStorage {
-    rpc Store(StoreRequest) returns (StoreResponse);
-    rpc Latest(LatestRequest) returns (LatestResponse);
-    rpc History(HistoryRequest) returns (HistoryResponse);
+  rpc Store(StoreRequest) returns (StoreResponse);
+  rpc Latest(LatestRequest) returns (LatestResponse);
+  rpc History(HistoryRequest) returns (HistoryResponse);
 }
-  
