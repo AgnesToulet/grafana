@@ -150,7 +150,7 @@ func (hs *HTTPServer) GetPluginSettingByID(c *models.ReqContext) response.Respon
 func (hs *HTTPServer) UpdatePluginSetting(c *models.ReqContext, cmd models.UpdatePluginSettingCmd) response.Response {
 	pluginID := c.Params(":pluginId")
 
-	if app := hs.PluginManager.GetApp(pluginID); app == nil {
+	if plugin := hs.PluginManager.GetPlugin(pluginID); plugin == nil {
 		return response.Error(404, "Plugin not installed", nil)
 	}
 
