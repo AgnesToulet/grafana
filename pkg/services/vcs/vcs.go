@@ -2,18 +2,25 @@ package vcs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"time"
 
+	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/infra/localcache"
 	"github.com/grafana/grafana/pkg/infra/log"
+	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/plugins/backendplugin/pluginextensionv2"
 	"github.com/grafana/grafana/pkg/registry"
 )
 
-const ServiceName = "VCSService"
+const ServiceName = "PluginService"
 
-type VCSService struct {
-	PluginManager plugins.Manager `inject:""`
+type PluginService struct {
+	Bus           bus.Bus                  `inject:""`
+	PluginManager plugins.Manager          `inject:""`
+	CacheService  *localcache.CacheService `inject:""`
 
 	log    log.Logger
 	plugin *plugins.VCSPlugin
@@ -22,18 +29,18 @@ type VCSService struct {
 func init() {
 	registry.Register(&registry.Descriptor{
 		Name:         ServiceName,
-		Instance:     &VCSService{},
+		Instance:     &PluginService{},
 		InitPriority: registry.High,
 	})
 }
 
-func (vs *VCSService) Init() error {
+func (vs *PluginService) Init() error {
 	vs.log = log.New("vcs plugin")
 
 	return nil
 }
 
-func (vs *VCSService) Run(ctx context.Context) error {
+func (vs *PluginService) Run(ctx context.Context) error {
 	vs.plugin = vs.PluginManager.VersionedControlStorage()
 
 	if vs.plugin != nil {
@@ -46,9 +53,15 @@ func (vs *VCSService) Run(ctx context.Context) error {
 	return nil
 }
 
-func (vs *VCSService) Store(ctx context.Context, object VersionedObject) error {
+func (vs *PluginService) Store(ctx context.Context, object VersionedObject) error {
+	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
+	if err != nil {
+		return err
+	}
+
 	req := &pluginextensionv2.StoreRequest{
-		VersionedObject: toPluginVersionedObject(object),
+		AppInstanceSettings: appInstanceSettings,
+		VersionedObject:     toPluginVersionedObject(object),
 	}
 
 	resp, err := vs.plugin.GRPCPlugin.Store(ctx, req)
@@ -63,9 +76,15 @@ func (vs *VCSService) Store(ctx context.Context, object VersionedObject) error {
 	return nil
 }
 
-func (vs *VCSService) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
+func (vs *PluginService) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
+	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	req := &pluginextensionv2.LatestRequest{
-		Kind: string(kind),
+		AppInstanceSettings: appInstanceSettings,
+		Kind:                string(kind),
 	}
 
 	resp, err := vs.plugin.GRPCPlugin.Latest(ctx, req)
@@ -84,10 +103,16 @@ func (vs *VCSService) Latest(ctx context.Context, kind Kind) (map[string]Version
 	return versionedObjects, nil
 }
 
-func (vs *VCSService) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+func (vs *PluginService) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
+	if err != nil {
+		return nil, err
+	}
+
 	req := &pluginextensionv2.HistoryRequest{
-		Kind: string(kind),
-		Id:   ID,
+		AppInstanceSettings: appInstanceSettings,
+		Kind:                string(kind),
+		Id:                  ID,
 	}
 
 	resp, err := vs.plugin.GRPCPlugin.History(ctx, req)
@@ -104,6 +129,50 @@ func (vs *VCSService) History(ctx context.Context, kind Kind, ID string) ([]Vers
 		versionedObjects[i] = fromPluginVersionedObject(obj)
 	}
 	return versionedObjects, nil
+}
+
+const appSettingsMainOrg = 1
+const appSettingsCacheTTL = 5 * time.Second
+const appSettingsCachePrefix = "app-setting-"
+
+func (vs *PluginService) appInstanceSettings(pluginID string) (*pluginextensionv2.AppInstanceSettings, error) {
+	ps, err := vs.pluginSettings(pluginID)
+	if err != nil {
+		return nil, err
+	}
+
+	jsonData, err := json.Marshal(ps.JsonData)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pluginextensionv2.AppInstanceSettings{
+		JsonData:                jsonData,
+		DecryptedSecureJsonData: ps.DecryptedValues(),
+		LastUpdatedMS:           ps.Updated.Unix(),
+	}, nil
+}
+
+func (vs *PluginService) pluginSettings(pluginID string) (*models.PluginSetting, error) {
+	cacheKey := appSettingsCachePrefix + pluginID
+
+	cached, found := vs.CacheService.Get(cacheKey)
+	if found {
+		return cached.(*models.PluginSetting), nil
+	}
+
+	q := &models.GetPluginSettingByIdQuery{
+		PluginId: pluginID,
+		OrgId:    appSettingsMainOrg,
+	}
+
+	if err := vs.Bus.Dispatch(q); err != nil {
+		return nil, err
+	}
+
+	vs.CacheService.Set(cacheKey, q.Result, appSettingsCacheTTL)
+
+	return q.Result, nil
 }
 
 func toPluginVersionedObject(object VersionedObject) *pluginextensionv2.VersionedObject {
