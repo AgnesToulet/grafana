@@ -1,4 +1,4 @@
-package dashboards
+package disk
 
 import (
 	"context"
@@ -9,21 +9,9 @@ import (
 	"github.com/grafana/grafana/pkg/dashboards"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	dashboardprovisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
 	"github.com/grafana/grafana/pkg/util/errutil"
 )
-
-// DashboardProvisioner is responsible for syncing dashboard from disk to
-// Grafana's database.
-type DashboardProvisioner interface {
-	Provision() error
-	PollChanges(ctx context.Context)
-	GetProvisionerResolvedPath(name string) string
-	GetAllowUIUpdatesFromConfig(name string) bool
-	CleanUpOrphanedDashboards()
-}
-
-// DashboardProvisionerFactory creates DashboardProvisioners based on input
-type DashboardProvisionerFactory func(string, dashboards.Store) (DashboardProvisioner, error)
 
 // Provisioner is responsible for syncing dashboard from disk to Grafana's database.
 type Provisioner struct {
@@ -33,7 +21,7 @@ type Provisioner struct {
 }
 
 // New returns a new DashboardProvisioner
-func New(configDirectory string, store dashboards.Store) (DashboardProvisioner, error) {
+func New(configDirectory string, store dashboards.Store) (dashboardprovisioning.DashboardProvisioner, error) {
 	logger := log.New("provisioning.dashboard")
 	cfgReader := &configReader{path: configDirectory, log: logger}
 	configs, err := cfgReader.readConfig()

@@ -9,6 +9,7 @@ import (
 	plugifaces "github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	dashboarddisk "github.com/grafana/grafana/pkg/services/provisioning/dashboards/disk"
 	dashboardvcs "github.com/grafana/grafana/pkg/services/provisioning/dashboards/vcs"
 	datasources "github.com/grafana/grafana/pkg/services/provisioning/datasources/provisioner"
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
@@ -41,7 +42,7 @@ func init() {
 func NewProvisioningServiceImpl() *provisioningServiceImpl {
 	return &provisioningServiceImpl{
 		log:                     log.New("provisioning"),
-		newDashboardProvisioner: dashboards.New,
+		newDashboardProvisioner: dashboarddisk.New,
 		provisionNotifiers:      notifiers.Provision,
 		provisionPlugins:        plugins.Provision,
 	}
@@ -96,7 +97,7 @@ func (ps *provisioningServiceImpl) RunInitProvisioners() error {
 		return err
 	}
 
-	err = ps.VCSDashboardProvisioner.Provision(context.TODO())
+	err = ps.VCSDashboardProvisioner.Provision()
 	if err != nil {
 		return err
 	}
@@ -105,32 +106,33 @@ func (ps *provisioningServiceImpl) RunInitProvisioners() error {
 }
 
 func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
-	err := ps.ProvisionDashboards()
-	if err != nil {
-		ps.log.Error("Failed to provision dashboard", "error", err)
-		return err
-	}
+	// err := ps.ProvisionDashboards()
+	// if err != nil {
+	// 	ps.log.Error("Failed to provision dashboard", "error", err)
+	// 	return err
+	// }
 
-	for {
-		// Wait for unlock. This is tied to new dashboardProvisioner to be instantiated before we start polling.
-		ps.mutex.Lock()
-		// Using background here because otherwise if root context was canceled the select later on would
-		// non-deterministically take one of the route possibly going into one polling loop before exiting.
-		pollingContext, cancelFun := context.WithCancel(context.Background())
-		ps.pollingCtxCancel = cancelFun
-		ps.dashboardProvisioner.PollChanges(pollingContext)
-		ps.mutex.Unlock()
+	// for {
+	// 	// Wait for unlock. This is tied to new dashboardProvisioner to be instantiated before we start polling.
+	// 	ps.mutex.Lock()
+	// 	// Using background here because otherwise if root context was canceled the select later on would
+	// 	// non-deterministically take one of the route possibly going into one polling loop before exiting.
+	// 	pollingContext, cancelFun := context.WithCancel(context.Background())
+	// 	ps.pollingCtxCancel = cancelFun
+	// 	ps.dashboardProvisioner.PollChanges(pollingContext)
+	// 	ps.mutex.Unlock()
 
-		select {
-		case <-pollingContext.Done():
-			// Polling was canceled.
-			continue
-		case <-ctx.Done():
-			// Root server context was cancelled so cancel polling and leave.
-			ps.cancelPolling()
-			return ctx.Err()
-		}
-	}
+	// 	select {
+	// 	case <-pollingContext.Done():
+	// 		// Polling was canceled.
+	// 		continue
+	// 	case <-ctx.Done():
+	// 		// Root server context was cancelled so cancel polling and leave.
+	// 		ps.cancelPolling()
+	// 		return ctx.Err()
+	// 	}
+	// }
+	return nil
 }
 
 func (ps *provisioningServiceImpl) ProvisionDatasources() error {
@@ -151,25 +153,26 @@ func (ps *provisioningServiceImpl) ProvisionNotifications() error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDashboards() error {
-	dashboardPath := filepath.Join(ps.Cfg.ProvisioningPath, "dashboards")
-	dashProvisioner, err := ps.newDashboardProvisioner(dashboardPath, ps.SQLStore)
-	if err != nil {
-		return errutil.Wrap("Failed to create provisioner", err)
-	}
+	// dashboardPath := filepath.Join(ps.Cfg.ProvisioningPath, "dashboards")
+	// dashProvisioner, err := ps.newDashboardProvisioner(dashboardPath, ps.SQLStore)
+	// if err != nil {
+	// 	return errutil.Wrap("Failed to create provisioner", err)
+	// }
 
-	ps.mutex.Lock()
-	defer ps.mutex.Unlock()
+	// ps.mutex.Lock()
+	// defer ps.mutex.Unlock()
 
-	ps.cancelPolling()
-	dashProvisioner.CleanUpOrphanedDashboards()
+	// ps.cancelPolling()
+	// dashProvisioner.CleanUpOrphanedDashboards()
 
-	err = dashProvisioner.Provision()
-	if err != nil {
-		// If we fail to provision with the new provisioner, the mutex will unlock and the polling will restart with the
-		// old provisioner as we did not switch them yet.
-		return errutil.Wrap("Failed to provision dashboards", err)
-	}
-	ps.dashboardProvisioner = dashProvisioner
+	// err = dashProvisioner.Provision()
+	// if err != nil {
+	// 	// If we fail to provision with the new provisioner, the mutex will unlock and the polling will restart with the
+	// 	// old provisioner as we did not switch them yet.
+	// 	return errutil.Wrap("Failed to provision dashboards", err)
+	// }
+	// ps.dashboardProvisioner = dashProvisioner
+	// return nil
 	return nil
 }
 

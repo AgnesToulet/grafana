@@ -9,6 +9,7 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/dashboards"
+	dashboardprovisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/services/vcs"
 )
@@ -21,7 +22,7 @@ type Provisioner struct {
 	log   log.Logger
 }
 
-// var _ dashboards.DashboardProvisioner = Provisioner{}
+var _ dashboardprovisioning.DashboardProvisioner = &Provisioner{}
 
 func init() {
 	registry.Register(&registry.Descriptor{
@@ -36,13 +37,13 @@ func (p *Provisioner) Init() error {
 	return nil
 }
 
-func (p *Provisioner) Provision(ctx context.Context) error {
+func (p *Provisioner) Provision() error {
 	if p.VCS.IsDisabled() {
 		p.log.Warn("cannot provision, VCS service is disabled")
 		return nil
 	}
 
-	vobjs, err := p.VCS.Latest(ctx, vcs.Dashboard)
+	vobjs, err := p.VCS.Latest(context.TODO(), vcs.Dashboard)
 	if err != nil {
 		p.log.Warn("cannot provision using VCS", err)
 		return nil
@@ -107,6 +108,22 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 	return nil
 }
 
+func (p *Provisioner) PollChanges(ctx context.Context) {
+
+}
+
+func (p *Provisioner) GetProvisionerResolvedPath(name string) string {
+	return ""
+}
+
+func (p *Provisioner) GetAllowUIUpdatesFromConfig(name string) bool {
+	return true
+}
+
+func (p *Provisioner) CleanUpOrphanedDashboards() {
+
+}
+
 func getProvisionedDashboardsByPath(service dashboards.DashboardProvisioningService, provisionerName string) (
 	map[string]*models.DashboardProvisioning, error) {
 	arr, err := service.GetProvisionedDashboardData(provisionerName)
@@ -125,19 +142,3 @@ func getProvisionedDashboardsByPath(service dashboards.DashboardProvisioningServ
 func getDashboardPath(id string) string {
 	return fmt.Sprintf("%s/%s.json", vcs.Dashboard, id)
 }
-
-// func (p *Provisioner) PollChanges(ctx context.Context) {
-
-// }
-
-// func (p *Provisioner) GetProvisionerResolvedPath(name string) string {
-// 	return ""
-// }
-
-// func (p *Provisioner) GetAllowUIUpdatesFromConfig(name string) bool {
-// 	return true
-// }
-
-// func (p *Provisioner) CleanUpOrphanedDashboards() {
-
-// }

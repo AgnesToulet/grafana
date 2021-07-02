@@ -1,4 +1,4 @@
-package dashboards
+package disk
 
 import (
 	"errors"
