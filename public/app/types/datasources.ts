@@ -5,6 +5,7 @@ import { HealthCheckResultDetails } from '@grafana/runtime/src/utils/DataSourceW
 export interface DataSourcesState {
   dataSources: DataSourceSettings[];
   versions: DataSourceHistoryVersion[];
+  version: DataSourceHistoryVersion;
   searchQuery: string;
   dataSourceTypeSearchQuery: string;
   layoutMode: LayoutMode;
@@ -39,4 +40,5 @@ export interface DataSourcePluginCategory {
 export interface DataSourceHistoryVersion {
   version: string;
   timestamp: string;
+  data?: string;
 }

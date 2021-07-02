@@ -17,6 +17,7 @@ import {
   dataSourcePluginsLoad,
   dataSourcePluginsLoaded,
   dataSourceHistoryLoaded,
+  dataSourceVersionLoaded,
   dataSourcesLoaded,
   initDataSourceSettingsFailed,
   initDataSourceSettingsSucceeded,
@@ -33,6 +34,10 @@ export interface DataSourceTypesLoadedPayload {
 
 export interface DataSourceHistoryLoadedPayload {
   versions: DataSourceHistoryVersion[];
+}
+
+export interface DataSourceVersionLoadedPayload {
+  version: DataSourceHistoryVersion;
 }
 
 export interface InitDataSourceSettingDependencies {
@@ -242,6 +247,15 @@ export function loadDataSourceHistory(): ThunkResult<void> {
     await updateFrontendSettings();
 
     dispatch(dataSourceHistoryLoaded({ versions }));
+  };
+}
+
+export function loadDataSourceVersion(version: DataSourceHistoryVersion): ThunkResult<void> {
+  return async (dispatch, getStore) => {
+    const dataSource = getStore().dataSources.dataSource;
+
+    const versionData = await getBackendSrv().get(`/api/datasources/uid/${dataSource.uid}/version/${version.version}`);
+    dispatch(dataSourceVersionLoaded({ version: versionData }));
   };
 }
 

@@ -529,6 +529,32 @@ func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Respon
 	return response.JSON(200, vObjs)
 }
 
+type VersionedObjectDTO struct {
+	ID        string `json:"id"`
+	Version   string `json:"version"`
+	Data      string `json:"data"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// Get /api/datasources/uid/:uid/version/:version
+func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Response {
+	if hs.PluginManager.VersionedControlStorage() == nil {
+		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	}
+
+	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, c.Params(":uid"), c.Params(":version"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	return response.JSON(200, VersionedObjectDTO{
+		ID:        vObj.ID,
+		Version:   vObj.Version,
+		Data:      string(vObj.Data),
+		Timestamp: vObj.Timestamp,
+	})
+}
+
 // PUT /api/datasources/:id/restore
 func (hs *HTTPServer) RestoreDataSource(c *models.ReqContext, cmd models.RestoreDataSourceCommand) response.Response {
 	if hs.PluginManager.VersionedControlStorage() == nil {

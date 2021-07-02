@@ -1,13 +1,18 @@
 import { AnyAction, createAction } from '@reduxjs/toolkit';
 import { DataSourcePluginMeta, DataSourceSettings, LayoutMode, LayoutModes } from '@grafana/data';
 
-import { DataSourcesState, DataSourceSettingsState, TestingStatus } from 'app/types';
-import { DataSourceTypesLoadedPayload, DataSourceHistoryLoadedPayload } from './actions';
+import { DataSourcesState, DataSourceSettingsState, TestingStatus, DataSourceHistoryVersion } from 'app/types';
+import {
+  DataSourceTypesLoadedPayload,
+  DataSourceHistoryLoadedPayload,
+  DataSourceVersionLoadedPayload,
+} from './actions';
 import { GenericDataSourcePlugin } from '../settings/PluginSettings';
 
 export const initialState: DataSourcesState = {
   dataSources: [],
   versions: [],
+  version: {} as DataSourceHistoryVersion,
   plugins: [],
   categories: [],
   dataSource: {} as DataSourceSettings,
@@ -31,6 +36,9 @@ export const dataSourcePluginsLoaded = createAction<DataSourceTypesLoadedPayload
 export const dataSourceHistoryLoad = createAction('dataSources/dataSourceHistoryLoad');
 export const dataSourceHistoryLoaded = createAction<DataSourceHistoryLoadedPayload>(
   'dataSources/dataSourceHistoryLoaded'
+);
+export const dataSourceVersionLoaded = createAction<DataSourceVersionLoadedPayload>(
+  'dataSources/dataSourceVersionLoaded'
 );
 export const setDataSourcesSearchQuery = createAction<string>('dataSources/setDataSourcesSearchQuery');
 export const setDataSourcesLayoutMode = createAction<LayoutMode>('dataSources/setDataSourcesLayoutMode');
@@ -87,6 +95,13 @@ export const dataSourcesReducer = (state: DataSourcesState = initialState, actio
       ...state,
       versions: action.payload.versions,
       isLoadingHistory: false,
+    };
+  }
+
+  if (dataSourceVersionLoaded.match(action)) {
+    return {
+      ...state,
+      version: action.payload.version,
     };
   }
 
