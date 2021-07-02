@@ -11,7 +11,8 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion6
+// Requires gRPC-Go v1.32.0 or later.
+const _ = grpc.SupportPackageIsVersion7
 
 // VersionedStorageClient is the client API for VersionedStorage service.
 //
@@ -20,6 +21,7 @@ type VersionedStorageClient interface {
 	Store(ctx context.Context, in *StoreRequest, opts ...grpc.CallOption) (*StoreResponse, error)
 	Latest(ctx context.Context, in *LatestRequest, opts ...grpc.CallOption) (*LatestResponse, error)
 	History(ctx context.Context, in *HistoryRequest, opts ...grpc.CallOption) (*HistoryResponse, error)
+	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
 }
 
 type versionedStorageClient struct {
@@ -57,6 +59,15 @@ func (c *versionedStorageClient) History(ctx context.Context, in *HistoryRequest
 	return out, nil
 }
 
+func (c *versionedStorageClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error) {
+	out := new(GetResponse)
+	err := c.cc.Invoke(ctx, "/pluginextensionv2.VersionedStorage/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VersionedStorageServer is the server API for VersionedStorage service.
 // All implementations must embed UnimplementedVersionedStorageServer
 // for forward compatibility
@@ -64,6 +75,7 @@ type VersionedStorageServer interface {
 	Store(context.Context, *StoreRequest) (*StoreResponse, error)
 	Latest(context.Context, *LatestRequest) (*LatestResponse, error)
 	History(context.Context, *HistoryRequest) (*HistoryResponse, error)
+	Get(context.Context, *GetRequest) (*GetResponse, error)
 	mustEmbedUnimplementedVersionedStorageServer()
 }
 
@@ -71,19 +83,29 @@ type VersionedStorageServer interface {
 type UnimplementedVersionedStorageServer struct {
 }
 
-func (*UnimplementedVersionedStorageServer) Store(context.Context, *StoreRequest) (*StoreResponse, error) {
+func (UnimplementedVersionedStorageServer) Store(context.Context, *StoreRequest) (*StoreResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Store not implemented")
 }
-func (*UnimplementedVersionedStorageServer) Latest(context.Context, *LatestRequest) (*LatestResponse, error) {
+func (UnimplementedVersionedStorageServer) Latest(context.Context, *LatestRequest) (*LatestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Latest not implemented")
 }
-func (*UnimplementedVersionedStorageServer) History(context.Context, *HistoryRequest) (*HistoryResponse, error) {
+func (UnimplementedVersionedStorageServer) History(context.Context, *HistoryRequest) (*HistoryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method History not implemented")
 }
-func (*UnimplementedVersionedStorageServer) mustEmbedUnimplementedVersionedStorageServer() {}
+func (UnimplementedVersionedStorageServer) Get(context.Context, *GetRequest) (*GetResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedVersionedStorageServer) mustEmbedUnimplementedVersionedStorageServer() {}
 
-func RegisterVersionedStorageServer(s *grpc.Server, srv VersionedStorageServer) {
-	s.RegisterService(&_VersionedStorage_serviceDesc, srv)
+// UnsafeVersionedStorageServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to VersionedStorageServer will
+// result in compilation errors.
+type UnsafeVersionedStorageServer interface {
+	mustEmbedUnimplementedVersionedStorageServer()
+}
+
+func RegisterVersionedStorageServer(s grpc.ServiceRegistrar, srv VersionedStorageServer) {
+	s.RegisterService(&VersionedStorage_ServiceDesc, srv)
 }
 
 func _VersionedStorage_Store_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -140,7 +162,28 @@ func _VersionedStorage_History_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-var _VersionedStorage_serviceDesc = grpc.ServiceDesc{
+func _VersionedStorage_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VersionedStorageServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pluginextensionv2.VersionedStorage/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VersionedStorageServer).Get(ctx, req.(*GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// VersionedStorage_ServiceDesc is the grpc.ServiceDesc for VersionedStorage service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var VersionedStorage_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "pluginextensionv2.VersionedStorage",
 	HandlerType: (*VersionedStorageServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -155,6 +198,10 @@ var _VersionedStorage_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "History",
 			Handler:    _VersionedStorage_History_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _VersionedStorage_Get_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

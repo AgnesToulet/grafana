@@ -245,11 +245,17 @@ export function loadDataSourceHistory(): ThunkResult<void> {
   };
 }
 
-export function restoreDataSourceVersion(dataSourceUid: string, version: DataSourceHistoryVersion): ThunkResult<void> {
+export function restoreDataSourceVersion(
+  dataSource: DataSourceSettings,
+  version: DataSourceHistoryVersion
+): ThunkResult<void> {
   return async (dispatch) => {
-    await getBackendSrv().put(`/api/datasources/uid/${dataSourceUid}/restore`, version);
+    await getBackendSrv().put(`/api/datasources/${dataSource.id}/restore`, {
+      uid: dataSource.uid,
+      version: version.version,
+    });
     await updateFrontendSettings();
-    return dispatch(loadDataSource(dataSourceUid));
+    return dispatch(loadDataSource(dataSource.uid));
   };
 }
 

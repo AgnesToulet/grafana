@@ -49,7 +49,7 @@ export class DataSourceHistory extends PureComponent<Props> {
 
   onRestore = (version: DataSourceHistoryVersion) => {
     const { dataSource, restoreDataSourceVersion } = this.props;
-    restoreDataSourceVersion(dataSource.uid, version);
+    restoreDataSourceVersion(dataSource, version);
   };
 
   render() {
