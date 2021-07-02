@@ -48,15 +48,15 @@ func (vs *PluginService) Init() error {
 	return nil
 }
 
-func (vs *PluginService) Store(ctx context.Context, object VersionedObject) error {
+func (vs *PluginService) Store(ctx context.Context, object VersionedObject) (*VersionedObject, error) {
 	if vs.plugin == nil {
 		vs.log.Warn("VCS plugin has not been instantiated correctly")
-		return nil
+		return nil, nil
 	}
 
 	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	req := &pluginextensionv2.StoreRequest{
@@ -66,14 +66,15 @@ func (vs *PluginService) Store(ctx context.Context, object VersionedObject) erro
 
 	resp, err := vs.plugin.GRPCPlugin.Store(ctx, req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if resp.Error != "" {
-		return fmt.Errorf("storing into versioned control storage failed: %s", resp.Error)
+		return nil, fmt.Errorf("storing into versioned control storage failed: %s", resp.Error)
 	}
 
-	return nil
+	vobj := fromPluginVersionedObject(resp.VersionedObject)
+	return &vobj, nil
 }
 
 func (vs *PluginService) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
