@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
@@ -12,13 +13,18 @@ import (
 	dashboardprovisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/services/vcs"
+	"github.com/grafana/grafana/pkg/setting"
 )
 
-const ProvisionerName = "gitops-vcs-provisioning"
+const (
+	ProvisionerName = "gitops-vcs-provisioning"
+	PollingPeriod   = 5 // Todo make this configurable
+)
 
 type Provisioner struct {
 	VCS   vcs.Service        `inject:""`
 	Store *sqlstore.SQLStore `inject:""`
+	Cfg   *setting.Cfg       `inject:""`
 	log   log.Logger
 }
 
@@ -109,7 +115,15 @@ func (p *Provisioner) Provision() error {
 }
 
 func (p *Provisioner) PollChanges(ctx context.Context) {
-
+	ticker := time.NewTicker(time.Duration(int64(time.Second) * PollingPeriod))
+	for {
+		select {
+		case <-ticker.C:
+			p.Provision()
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (p *Provisioner) GetProvisionerResolvedPath(name string) string {
