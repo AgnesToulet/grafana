@@ -17,17 +17,17 @@ type Calls struct {
 // VCSServiceMock is a mock implementation of the VCS Service
 type VCSServiceMock struct {
 	Calls       *Calls
-	StoreFunc   func(context.Context, vcs.VersionedObject) error
+	StoreFunc   func(context.Context, vcs.VersionedObject) (*vcs.VersionedObject, error)
 	LatestFunc  func(context.Context, vcs.Kind) (map[string]vcs.VersionedObject, error)
 	HistoryFunc func(context.Context, vcs.Kind, string) ([]vcs.VersionedObject, error)
 }
 
-func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) error {
+func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) (*vcs.VersionedObject, error) {
 	m.Calls.Store = append(m.Calls.Store, []interface{}{ctx, vObj})
 	if m.StoreFunc != nil {
 		return m.StoreFunc(ctx, vObj)
 	}
-	return nil
+	return nil, nil
 }
 
 func (m *VCSServiceMock) Latest(ctx context.Context, kind vcs.Kind) (map[string]vcs.VersionedObject, error) {

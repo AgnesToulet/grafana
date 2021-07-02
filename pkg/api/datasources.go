@@ -253,7 +253,9 @@ func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSo
 		Data: dsJson,
 	}
 
-	return hs.VCS.Store(ctx, vobj)
+	_, err = hs.VCS.Store(ctx, vobj)
+
+	return err
 }
 
 func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDataSourceCommand) response.Response {
