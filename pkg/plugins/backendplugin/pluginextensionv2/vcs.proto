@@ -3,44 +3,53 @@ package pluginextensionv2;
 
 option go_package = "./;pluginextensionv2";
 
+message AppInstanceSettings {
+  bytes jsonData = 3;
+  map<string, string> decryptedSecureJsonData = 4;
+  int64 lastUpdatedMS = 5;
+}
+
 message VersionedObject {
-    string id = 1;
-    string version = 2;
-    string kind = 3;
-    bytes data = 4;
-    int64 timestamp = 5;
+  string id = 1;
+  string version = 2;
+  string kind = 3;
+  bytes data = 4;
+  int64 timestamp = 5;
 }
 
 message StoreRequest {
-    VersionedObject versionedObject = 1;
+  AppInstanceSettings appInstanceSettings = 1;
+  VersionedObject versionedObject = 2;
 }
 
 message StoreResponse {
-    string error = 1;
+  string error = 1;
+  VersionedObject versionedObject = 2;
 }
 
 message LatestRequest {
-    string kind = 1;
+  AppInstanceSettings appInstanceSettings = 1;
+  string kind = 2;
 }
 
 message LatestResponse {
-    string error = 1;
-    map<string, VersionedObject> latestVersionedObjects = 2;
+  string error = 1;
+  map<string, VersionedObject> latestVersionedObjects = 2;
 }
 
 message HistoryRequest {
-    string kind = 1;
-    string id = 2;
+  AppInstanceSettings appInstanceSettings = 1;
+  string kind = 2;
+  string id = 3;
 }
 
 message HistoryResponse {
-    string error = 1;
-    repeated VersionedObject versionedObjects = 2;
+  string error = 1;
+  repeated VersionedObject versionedObjects = 2;
 }
 
 service VersionedStorage {
-    rpc Store(StoreRequest) returns (StoreResponse);
-    rpc Latest(LatestRequest) returns (LatestResponse);
-    rpc History(HistoryRequest) returns (HistoryResponse);
+  rpc Store(StoreRequest) returns (StoreResponse);
+  rpc Latest(LatestRequest) returns (LatestResponse);
+  rpc History(HistoryRequest) returns (HistoryResponse);
 }
-  
