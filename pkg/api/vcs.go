@@ -8,7 +8,7 @@ import (
 )
 
 func (hs *HTTPServer) storeObjInVCS(ctx context.Context, kind vcs.Kind, uid string, obj interface{}) error {
-	if hs.VCS.IsDisabled() {
+	if hs.VCS == nil || hs.VCS.IsDisabled() {
 		return nil
 	}
 

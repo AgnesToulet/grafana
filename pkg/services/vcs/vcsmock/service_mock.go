@@ -24,6 +24,11 @@ type VCSServiceMock struct {
 	IsDisabledFunc func() bool
 }
 
+func NewVCSMock() *VCSServiceMock {
+	calls := &Calls{}
+	return &VCSServiceMock{Calls: calls}
+}
+
 func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) (*vcs.VersionedObject, error) {
 	m.Calls.Store = append(m.Calls.Store, []interface{}{ctx, vObj})
 	if m.StoreFunc != nil {
@@ -53,5 +58,5 @@ func (m *VCSServiceMock) IsDisabled() bool {
 	if m.IsDisabledFunc != nil {
 		return m.IsDisabledFunc()
 	}
-	return false
+	return true
 }
