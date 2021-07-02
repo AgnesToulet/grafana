@@ -3,7 +3,6 @@ package configreader
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/grafana/grafana/pkg/components/simplejson"
@@ -26,12 +25,8 @@ func (cr *vcsConfigReader) ReadConfigs(ctx context.Context) ([]*datasources.Conf
 	// Get all versioned datasources
 	datasourcesMap, err := cr.vcs.Latest(ctx, vcs.Datasource)
 	if err != nil {
-		// If plugin has not been setup don't error
-		if errors.Is(err, models.ErrPluginSettingNotFound) {
-			cr.log.Warn("cannot provision using VCS, plugin settings have not been set yet.")
-			return []*datasources.Configs{}, nil
-		}
-		return nil, err
+		cr.log.Warn("cannot provision using VCS", err)
+		return nil, nil
 	}
 	if len(datasourcesMap) == 0 {
 		return []*datasources.Configs{}, nil

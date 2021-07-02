@@ -13,6 +13,7 @@ import (
 	"github.com/grafana/grafana/pkg/plugins/backendplugin/pluginextensionv2"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
+	"github.com/grafana/grafana/pkg/setting"
 )
 
 const ServiceName = "PluginService"
@@ -20,6 +21,7 @@ const ServiceName = "PluginService"
 type PluginService struct {
 	PluginManager plugins.Manager          `inject:""`
 	CacheService  *localcache.CacheService `inject:""`
+	Cfg           *setting.Cfg             `inject:""`
 
 	log    log.Logger
 	plugin *plugins.VCSPlugin
@@ -46,6 +48,13 @@ func (vs *PluginService) Init() error {
 	}
 
 	return nil
+}
+
+func (vs *PluginService) IsDisabled() bool {
+	pluginInit := vs.PluginManager.VersionedControlStorage() != nil
+	_, gitops := vs.Cfg.FeatureToggles["gitops"]
+
+	return !gitops || !pluginInit
 }
 
 func (vs *PluginService) Store(ctx context.Context, object VersionedObject) (*VersionedObject, error) {

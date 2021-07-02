@@ -40,7 +40,7 @@ func (dc *DatasourceProvisioner) Init() error {
 	dc.log = log.New("datasources.provisioner")
 
 	// Use feature toggle to read configs from files or Version Control System
-	if gitops, ok := dc.Cfg.FeatureToggles["gitops"]; ok && gitops {
+	if !dc.VCS.IsDisabled() {
 		configReader = configreader.NewVCSConfigReader(dc.log, dc.VCS)
 	} else {
 		configPath := filepath.Join(dc.Cfg.ProvisioningPath, "datasources")

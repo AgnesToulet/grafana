@@ -11,6 +11,7 @@ import (
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/alerting"
 	"github.com/grafana/grafana/pkg/services/dashboards"
+	"github.com/grafana/grafana/pkg/services/vcs"
 
 	"github.com/grafana/grafana/pkg/api/dtos"
 	"github.com/grafana/grafana/pkg/api/response"
@@ -357,6 +358,11 @@ func (hs *HTTPServer) PostDashboard(c *models.ReqContext, cmd models.SaveDashboa
 
 	if err != nil {
 		return hs.dashboardSaveErrorToApiResponse(err)
+	}
+
+	// Persist the dashboard in VCS
+	if err = hs.storeObjInVCS(c.Req.Context(), vcs.Dashboard, dashboard.Uid, *dashboard); err != nil {
+		hs.log.Warn("could not store dashboard in VCS", err)
 	}
 
 	if hs.Cfg.EditorsCanAdmin && newDashboard {
