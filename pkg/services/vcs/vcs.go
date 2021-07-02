@@ -6,19 +6,18 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/infra/localcache"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/plugins/backendplugin/pluginextensionv2"
 	"github.com/grafana/grafana/pkg/registry"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
 )
 
 const ServiceName = "PluginService"
 
 type PluginService struct {
-	Bus           bus.Bus                  `inject:""`
 	PluginManager plugins.Manager          `inject:""`
 	CacheService  *localcache.CacheService `inject:""`
 
@@ -176,7 +175,7 @@ func (vs *PluginService) pluginSettings(pluginID string) (*models.PluginSetting,
 		OrgId:    appSettingsMainOrg,
 	}
 
-	if err := vs.Bus.Dispatch(q); err != nil {
+	if err := sqlstore.GetPluginSettingById(q); err != nil {
 		return nil, err
 	}
 
