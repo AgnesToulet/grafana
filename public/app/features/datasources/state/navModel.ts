@@ -20,6 +20,13 @@ export function buildNavModel(dataSource: DataSourceSettings, plugin: GenericDat
         text: 'Settings',
         url: `datasources/edit/${dataSource.uid}/`,
       },
+      {
+        active: false,
+        icon: 'history',
+        id: `datasource-history-${dataSource.uid}`,
+        text: 'History',
+        url: `datasources/edit/${dataSource.uid}/history`,
+      },
     ],
   };
 

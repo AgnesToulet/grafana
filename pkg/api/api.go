@@ -269,6 +269,7 @@ func (hs *HTTPServer) registerRoutes() {
 			datasourceRoute.Get("/:id", routing.Wrap(GetDataSourceById))
 			datasourceRoute.Get("/uid/:uid", routing.Wrap(GetDataSourceByUID))
 			datasourceRoute.Get("/name/:name", routing.Wrap(GetDataSourceByName))
+			datasourceRoute.Get("/uid/:uid/history", routing.Wrap(hs.GetDataSourceHistory))
 		}, reqOrgAdmin)
 
 		apiRoute.Get("/datasources/id/:name", routing.Wrap(GetDataSourceIdByName), reqSignedIn)

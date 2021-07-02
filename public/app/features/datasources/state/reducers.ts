@@ -2,11 +2,12 @@ import { AnyAction, createAction } from '@reduxjs/toolkit';
 import { DataSourcePluginMeta, DataSourceSettings, LayoutMode, LayoutModes } from '@grafana/data';
 
 import { DataSourcesState, DataSourceSettingsState, TestingStatus } from 'app/types';
-import { DataSourceTypesLoadedPayload } from './actions';
+import { DataSourceTypesLoadedPayload, DataSourceHistoryLoadedPayload } from './actions';
 import { GenericDataSourcePlugin } from '../settings/PluginSettings';
 
 export const initialState: DataSourcesState = {
   dataSources: [],
+  versions: [],
   plugins: [],
   categories: [],
   dataSource: {} as DataSourceSettings,
@@ -16,6 +17,7 @@ export const initialState: DataSourcesState = {
   dataSourceTypeSearchQuery: '',
   hasFetched: false,
   isLoadingDataSources: false,
+  isLoadingHistory: false,
   dataSourceMeta: {} as DataSourcePluginMeta,
 };
 
@@ -25,6 +27,10 @@ export const dataSourceMetaLoaded = createAction<DataSourcePluginMeta>('dataSour
 export const dataSourcePluginsLoad = createAction('dataSources/dataSourcePluginsLoad');
 export const dataSourcePluginsLoaded = createAction<DataSourceTypesLoadedPayload>(
   'dataSources/dataSourcePluginsLoaded'
+);
+export const dataSourceHistoryLoad = createAction('dataSources/dataSourceHistoryLoad');
+export const dataSourceHistoryLoaded = createAction<DataSourceHistoryLoadedPayload>(
+  'dataSources/dataSourceHistoryLoaded'
 );
 export const setDataSourcesSearchQuery = createAction<string>('dataSources/setDataSourcesSearchQuery');
 export const setDataSourcesLayoutMode = createAction<LayoutMode>('dataSources/setDataSourcesLayoutMode');
@@ -69,6 +75,18 @@ export const dataSourcesReducer = (state: DataSourcesState = initialState, actio
       plugins: action.payload.plugins,
       categories: action.payload.categories,
       isLoadingDataSources: false,
+    };
+  }
+
+  if (dataSourceHistoryLoad.match(action)) {
+    return { ...state, versions: [], isLoadingHistory: true };
+  }
+
+  if (dataSourceHistoryLoaded.match(action)) {
+    return {
+      ...state,
+      versions: action.payload.versions,
+      isLoadingHistory: false,
     };
   }
 

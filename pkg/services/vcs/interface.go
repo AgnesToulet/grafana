@@ -9,11 +9,11 @@ const (
 )
 
 type VersionedObject struct {
-	ID        string
-	Version   string
-	Kind      Kind
-	Data      []byte
-	Timestamp int64
+	ID        string `json:"id"`
+	Version   string `json:"version"`
+	Kind      Kind   `json:"-"`
+	Data      []byte `json:"data"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 type Service interface {

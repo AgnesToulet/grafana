@@ -5,7 +5,7 @@ import { getBackendSrv } from 'app/core/services/backend_srv';
 import { getDatasourceSrv } from 'app/features/plugins/datasource_srv';
 import { importDataSourcePlugin } from 'app/features/plugins/plugin_loader';
 import { getPluginSettings } from 'app/features/plugins/PluginSettingsCache';
-import { DataSourcePluginCategory, ThunkDispatch, ThunkResult } from 'app/types';
+import { DataSourceHistoryVersion, DataSourcePluginCategory, ThunkDispatch, ThunkResult } from 'app/types';
 
 import config from '../../../core/config';
 
@@ -16,6 +16,7 @@ import {
   dataSourceMetaLoaded,
   dataSourcePluginsLoad,
   dataSourcePluginsLoaded,
+  dataSourceHistoryLoaded,
   dataSourcesLoaded,
   initDataSourceSettingsFailed,
   initDataSourceSettingsSucceeded,
@@ -28,6 +29,10 @@ import { getDataSource, getDataSourceMeta } from './selectors';
 export interface DataSourceTypesLoadedPayload {
   plugins: DataSourcePluginMeta[];
   categories: DataSourcePluginCategory[];
+}
+
+export interface DataSourceHistoryLoadedPayload {
+  versions: DataSourceHistoryVersion[];
 }
 
 export interface InitDataSourceSettingDependencies {
@@ -226,6 +231,25 @@ export function deleteDataSource(): ThunkResult<void> {
     await updateFrontendSettings();
 
     locationService.push('/datasources');
+  };
+}
+
+export function loadDataSourceHistory(): ThunkResult<void> {
+  return async (dispatch, getStore) => {
+    const dataSource = getStore().dataSources.dataSource;
+
+    const versions = await getBackendSrv().get(`/api/datasources/uid/${dataSource.uid}/history`);
+    await updateFrontendSettings();
+
+    dispatch(dataSourceHistoryLoaded({ versions }));
+  };
+}
+
+export function restoreDataSourceVersion(dataSourceUid: string, version: DataSourceHistoryVersion): ThunkResult<void> {
+  return async (dispatch) => {
+    await getBackendSrv().put(`/api/datasources/uid/${dataSourceUid}/restore`, version);
+    await updateFrontendSettings();
+    return dispatch(loadDataSource(dataSourceUid));
   };
 }
 

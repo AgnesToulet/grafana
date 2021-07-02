@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 
 	"github.com/grafana/grafana/pkg/api/datasource"
@@ -510,4 +511,18 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 	}
 
 	return response.JSON(200, payload)
+}
+
+// Get /api/datasources/uid/:uid/history
+func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Response {
+	if hs.PluginManager.VersionedControlStorage() == nil {
+		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	}
+
+	vObjs, err := hs.VCS.History(c.Req.Context(), vcs.Datasource, c.Params(":uid"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	return response.JSON(200, vObjs)
 }
