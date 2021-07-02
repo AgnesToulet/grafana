@@ -127,7 +127,7 @@ func (p *Provisioner) PollChanges(ctx context.Context) {
 }
 
 func (p *Provisioner) GetProvisionerResolvedPath(name string) string {
-	return ""
+	return string(vcs.Dashboard)
 }
 
 func (p *Provisioner) GetAllowUIUpdatesFromConfig(name string) bool {

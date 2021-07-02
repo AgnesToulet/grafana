@@ -97,7 +97,7 @@ func (ps *provisioningServiceImpl) RunInitProvisioners() error {
 		return err
 	}
 
-	err = ps.VCSDashboardProvisioner.Provision()
+	err = ps.ProvisionDashboards()
 	if err != nil {
 		return err
 	}
@@ -132,6 +132,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 	// 		return ctx.Err()
 	// 	}
 	// }
+	ps.VCSDashboardProvisioner.PollChanges(ctx)
 	return nil
 }
 
@@ -173,15 +174,16 @@ func (ps *provisioningServiceImpl) ProvisionDashboards() error {
 	// }
 	// ps.dashboardProvisioner = dashProvisioner
 	// return nil
+	ps.VCSDashboardProvisioner.Provision()
 	return nil
 }
 
 func (ps *provisioningServiceImpl) GetDashboardProvisionerResolvedPath(name string) string {
-	return ps.dashboardProvisioner.GetProvisionerResolvedPath(name)
+	return ps.VCSDashboardProvisioner.GetProvisionerResolvedPath(name)
 }
 
 func (ps *provisioningServiceImpl) GetAllowUIUpdatesFromConfig(name string) bool {
-	return ps.dashboardProvisioner.GetAllowUIUpdatesFromConfig(name)
+	return ps.VCSDashboardProvisioner.GetAllowUIUpdatesFromConfig(name)
 }
 
 func (ps *provisioningServiceImpl) cancelPolling() {
