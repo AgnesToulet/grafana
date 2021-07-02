@@ -27,33 +27,34 @@ type PluginService struct {
 }
 
 func init() {
+	// Start service after Plugin Manager
 	registry.Register(&registry.Descriptor{
 		Name:         ServiceName,
 		Instance:     &PluginService{},
-		InitPriority: registry.High,
+		InitPriority: registry.MediumHigh - 1,
 	})
 }
 
 func (vs *PluginService) Init() error {
 	vs.log = log.New("vcs plugin")
 
-	return nil
-}
-
-func (vs *PluginService) Run(ctx context.Context) error {
 	vs.plugin = vs.PluginManager.VersionedControlStorage()
 
 	if vs.plugin != nil {
-		if err := vs.plugin.Start(ctx); err != nil {
+		if err := vs.plugin.Start(context.Background()); err != nil {
 			return err
 		}
 	}
 
-	<-ctx.Done()
 	return nil
 }
 
 func (vs *PluginService) Store(ctx context.Context, object VersionedObject) error {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil
+	}
+
 	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
 	if err != nil {
 		return err
@@ -77,6 +78,11 @@ func (vs *PluginService) Store(ctx context.Context, object VersionedObject) erro
 }
 
 func (vs *PluginService) Latest(ctx context.Context, kind Kind) (map[string]VersionedObject, error) {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil, nil
+	}
+
 	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
 	if err != nil {
 		return nil, err
@@ -104,6 +110,10 @@ func (vs *PluginService) Latest(ctx context.Context, kind Kind) (map[string]Vers
 }
 
 func (vs *PluginService) History(ctx context.Context, kind Kind, ID string) ([]VersionedObject, error) {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil, nil
+	}
 	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
 	if err != nil {
 		return nil, err

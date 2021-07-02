@@ -270,3 +270,13 @@ function getPanelPlugin(meta: grafanaData.PanelPluginMeta): Promise<grafanaData.
       return getPanelPluginLoadError(meta, err);
     });
 }
+
+export function importVCSPlugin(meta: grafanaData.PluginMeta): Promise<grafanaData.GrafanaPlugin> {
+  return importPluginModule(meta.module).then((pluginExports) => {
+    const plugin = pluginExports.plugin
+      ? (pluginExports.plugin as grafanaData.GrafanaPlugin)
+      : new grafanaData.GrafanaPlugin();
+    plugin.meta = meta;
+    return plugin;
+  });
+}

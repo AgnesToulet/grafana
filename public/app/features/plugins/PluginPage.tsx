@@ -24,7 +24,7 @@ import { Alert, LinkButton, PluginSignatureBadge, Tooltip, Badge, useStyles2, Ic
 
 import Page from 'app/core/components/Page/Page';
 import { getPluginSettings } from './PluginSettingsCache';
-import { importAppPlugin, importDataSourcePlugin, importPanelPluginFromMeta } from './plugin_loader';
+import { importAppPlugin, importDataSourcePlugin, importPanelPluginFromMeta, importVCSPlugin } from './plugin_loader';
 import { getNotFoundNav } from 'app/core/nav_model_srv';
 import { PluginHelp } from 'app/core/components/PluginHelp/PluginHelp';
 import { AppConfigCtrlWrapper } from './wrappers/AppConfigWrapper';
@@ -398,21 +398,6 @@ function getPluginTabsNav(
         defaultPage = PAGE_ID_CONFIG_CTRL;
       }
 
-      if (plugin.configPages) {
-        for (const page of plugin.configPages) {
-          pages.push({
-            text: page.title,
-            icon: page.icon,
-            url: `${appSubUrl}${path}?page=${page.id}`,
-            id: page.id,
-          });
-
-          if (!defaultPage) {
-            defaultPage = page.id;
-          }
-        }
-      }
-
       // Check for the dashboard pages
       if (find(meta.includes, { type: PluginIncludeType.dashboard })) {
         pages.push({
@@ -421,6 +406,21 @@ function getPluginTabsNav(
           url: `${appSubUrl}${path}?page=${PAGE_ID_DASHBOARDS}`,
           id: PAGE_ID_DASHBOARDS,
         });
+      }
+    }
+
+    if ((meta.type === PluginType.app || meta.type === PluginType.vcs) && plugin.configPages) {
+      for (const page of plugin.configPages) {
+        pages.push({
+          text: page.title,
+          icon: page.icon,
+          url: `${appSubUrl}${path}?page=${page.id}`,
+          id: page.id,
+        });
+
+        if (!defaultPage) {
+          defaultPage = page.id;
+        }
       }
     }
   }
@@ -495,19 +495,20 @@ export function getLoadingNav(): NavModel {
 
 export function loadPlugin(pluginId: string): Promise<GrafanaPlugin> {
   return getPluginSettings(pluginId).then((info) => {
-    if (info.type === PluginType.app) {
-      return importAppPlugin(info);
+    switch (info.type) {
+      case PluginType.app:
+        return importAppPlugin(info);
+      case PluginType.datasource:
+        return importDataSourcePlugin(info);
+      case PluginType.panel:
+        return importPanelPluginFromMeta(info as PanelPluginMeta);
+      case PluginType.renderer:
+        return Promise.resolve({ meta: info } as GrafanaPlugin);
+      case PluginType.vcs:
+        return importVCSPlugin(info);
+      default:
+        return Promise.reject('Unknown Plugin type: ' + info.type);
     }
-    if (info.type === PluginType.datasource) {
-      return importDataSourcePlugin(info);
-    }
-    if (info.type === PluginType.panel) {
-      return importPanelPluginFromMeta(info as PanelPluginMeta);
-    }
-    if (info.type === PluginType.renderer) {
-      return Promise.resolve({ meta: info } as GrafanaPlugin);
-    }
-    return Promise.reject('Unknown Plugin type: ' + info.type);
   });
 }
 

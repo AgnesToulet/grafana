@@ -261,7 +261,7 @@ func (hs *HTTPServer) registerRoutes() {
 		// Data sources
 		apiRoute.Group("/datasources", func(datasourceRoute routing.RouteRegister) {
 			datasourceRoute.Get("/", routing.Wrap(hs.GetDataSources))
-			datasourceRoute.Post("/", quota("data_source"), bind(models.AddDataSourceCommand{}), routing.Wrap(AddDataSource))
+			datasourceRoute.Post("/", quota("data_source"), bind(models.AddDataSourceCommand{}), routing.Wrap(hs.AddDataSource))
 			datasourceRoute.Put("/:id", bind(models.UpdateDataSourceCommand{}), routing.Wrap(hs.UpdateDataSource))
 			datasourceRoute.Delete("/:id", routing.Wrap(hs.DeleteDataSourceById))
 			datasourceRoute.Delete("/uid/:uid", routing.Wrap(hs.DeleteDataSourceByUID))
