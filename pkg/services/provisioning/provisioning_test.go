@@ -8,6 +8,7 @@ import (
 
 	dboards "github.com/grafana/grafana/pkg/dashboards"
 	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	dashboardprovmock "github.com/grafana/grafana/pkg/services/provisioning/dashboards/mock"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/stretchr/testify/assert"
 )
@@ -75,7 +76,7 @@ type serviceTestStruct struct {
 	startService func()
 	cancel       func()
 
-	mock    *dashboards.ProvisionerMock
+	mock    *dashboardprovmock.ProvisionerMock
 	service *provisioningServiceImpl
 }
 
@@ -86,7 +87,7 @@ func setup() *serviceTestStruct {
 	pollChangesChannel := make(chan context.Context)
 	serviceStopped := make(chan interface{})
 
-	serviceTest.mock = dashboards.NewDashboardProvisionerMock()
+	serviceTest.mock = dashboardprovmock.NewDashboardProvisionerMock()
 	serviceTest.mock.PollChangesFunc = func(ctx context.Context) {
 		pollChangesChannel <- ctx
 	}
