@@ -9,6 +9,7 @@ import (
 	plugifaces "github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/registry"
 	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	dashboardvcs "github.com/grafana/grafana/pkg/services/provisioning/dashboards/vcs"
 	datasources "github.com/grafana/grafana/pkg/services/provisioning/datasources/provisioner"
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
 	"github.com/grafana/grafana/pkg/services/provisioning/plugins"
@@ -65,6 +66,7 @@ type provisioningServiceImpl struct {
 	SQLStore                *sqlstore.SQLStore                 `inject:""`
 	PluginManager           plugifaces.Manager                 `inject:""`
 	DatasrcProvisioner      *datasources.DatasourceProvisioner `inject:""`
+	VCSDashboardProvisioner *dashboardvcs.Provisioner          `inject:""`
 	log                     log.Logger
 	pollingCtxCancel        context.CancelFunc
 	newDashboardProvisioner dashboards.DashboardProvisionerFactory
@@ -90,6 +92,11 @@ func (ps *provisioningServiceImpl) RunInitProvisioners() error {
 	}
 
 	err = ps.ProvisionNotifications()
+	if err != nil {
+		return err
+	}
+
+	err = ps.VCSDashboardProvisioner.Provision(context.TODO())
 	if err != nil {
 		return err
 	}
