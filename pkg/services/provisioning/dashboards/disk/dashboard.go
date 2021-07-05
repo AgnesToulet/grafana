@@ -36,7 +36,7 @@ func init() {
 
 func (p *Provisioner) Init() error {
 	logger := log.New("dashboards.provisioner")
-	configDirectory := filepath.Join(p.Cfg.ProvisioningPath, "datasources")
+	configDirectory := filepath.Join(p.Cfg.ProvisioningPath, "dashboards")
 
 	cfgReader := &configReader{path: configDirectory, log: logger}
 
