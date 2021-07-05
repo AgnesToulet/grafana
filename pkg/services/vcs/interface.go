@@ -9,10 +9,17 @@ const (
 )
 
 type VersionedObject struct {
+	ID        string
+	Version   string
+	Kind      Kind
+	Data      []byte
+	Timestamp int64
+}
+
+type VersionedObjectDTO struct {
 	ID        string `json:"id"`
 	Version   string `json:"version"`
-	Kind      Kind   `json:"-"`
-	Data      []byte `json:"data"`
+	Data      string `json:"data"`
 	Timestamp int64  `json:"timestamp"`
 }
 

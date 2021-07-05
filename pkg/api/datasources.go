@@ -526,14 +526,16 @@ func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Respon
 		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
 	}
 
-	return response.JSON(200, vObjs)
-}
+	result := make([]vcs.VersionedObjectDTO, len(vObjs))
+	for i, vObj := range vObjs {
+		result[i] = vcs.VersionedObjectDTO{
+			ID:        vObj.ID,
+			Version:   vObj.Version,
+			Timestamp: vObj.Timestamp,
+		}
+	}
 
-type VersionedObjectDTO struct {
-	ID        string `json:"id"`
-	Version   string `json:"version"`
-	Data      string `json:"data"`
-	Timestamp int64  `json:"timestamp"`
+	return response.JSON(200, result)
 }
 
 // Get /api/datasources/uid/:uid/version/:version
@@ -547,7 +549,7 @@ func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Respon
 		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
 	}
 
-	return response.JSON(200, VersionedObjectDTO{
+	return response.JSON(200, vcs.VersionedObjectDTO{
 		ID:        vObj.ID,
 		Version:   vObj.Version,
 		Data:      string(vObj.Data),
