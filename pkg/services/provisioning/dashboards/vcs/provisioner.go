@@ -28,6 +28,7 @@ type Provisioner struct {
 	log   log.Logger
 }
 
+// Ensure compliance to the interface
 var _ dashboardprovisioning.DashboardProvisioner = &Provisioner{}
 
 func init() {
@@ -49,6 +50,7 @@ func (p *Provisioner) IsDisabled() bool {
 	return !gitops
 }
 
+// Provision provisioned all latest datasources files found in VCS should their version have change
 func (p *Provisioner) Provision() error {
 	if p.VCS.IsDisabled() {
 		p.log.Warn("cannot provision, VCS service is disabled")
@@ -65,11 +67,6 @@ func (p *Provisioner) Provision() error {
 	provisionedDashboardRefs, err := getProvisionedDashboardsByPath(dashSvc, ProvisionerName)
 
 	for _, obj := range vobjs {
-		dash := &models.Dashboard{}
-		err := json.Unmarshal(obj.Data, dash)
-		if err != nil {
-			return err
-		}
 		// Here we assume the dash.Id is correct => dashboard was saved from grafana
 		path := getDashboardPath(obj.ID)
 		pastProvisioningInfo, alreadyProvisioned := provisionedDashboardRefs[path]
@@ -83,36 +80,7 @@ func (p *Provisioner) Provision() error {
 			continue
 		}
 
-		p.log.Debug("saving new dashboard", "provisioner", ProvisionerName,
-			"file", path,
-			"folderId", dash.FolderId)
-
-		dto := dashboards.SaveDashboardDTO{
-			OrgId:     dash.OrgId,
-			UpdatedAt: dash.Updated,
-			Message:   "Provisioned by " + ProvisionerName,
-			Overwrite: false,
-			Dashboard: dash,
-		}
-
-		if dto.Dashboard.Id != 0 {
-			dto.Dashboard.Data.Set("id", nil)
-			dto.Dashboard.Id = 0
-		}
-
-		if alreadyProvisioned {
-			dto.Dashboard.SetId(pastProvisioningInfo.DashboardId)
-		}
-
-		dp := &models.DashboardProvisioning{
-			ExternalId: path,
-			Name:       ProvisionerName,
-			Updated:    obj.Timestamp,
-			CheckSum:   obj.Version,
-		}
-
-		_, err = dashSvc.SaveProvisionedDashboard(&dto, dp)
-		if err != nil {
+		if err = p.saveProvisionedDashboard(dashSvc, obj, pastProvisioningInfo); err != nil {
 			return err
 		}
 	}
@@ -120,6 +88,55 @@ func (p *Provisioner) Provision() error {
 	return nil
 }
 
+// saveProvisionedDashboard creates the structures to save a dashboard and its provisioning info in store
+func (p *Provisioner) saveProvisionedDashboard(dashSvc dashboards.DashboardProvisioningService, obj vcs.VersionedObject, pastProvisioningInfo *models.DashboardProvisioning) error {
+	// Unmarshal the dashboard json
+	dash := &models.Dashboard{}
+	err := json.Unmarshal(obj.Data, dash)
+	if err != nil {
+		return err
+	}
+	path := getDashboardPath(obj.ID)
+
+	// Prepare info to save dashboard in store
+	dto := dashboards.SaveDashboardDTO{
+		OrgId:     dash.OrgId,
+		UpdatedAt: dash.Updated,
+		Message:   "Provisioned by " + ProvisionerName,
+		Overwrite: false,
+		Dashboard: dash,
+	}
+
+	if dto.Dashboard.Id != 0 {
+		dto.Dashboard.Data.Set("id", nil)
+		dto.Dashboard.Id = 0
+	}
+
+	if pastProvisioningInfo != nil {
+		dto.Dashboard.SetId(pastProvisioningInfo.DashboardId)
+	}
+
+	// Prepare info to save provisioning information in store
+	dp := &models.DashboardProvisioning{
+		ExternalId: path,
+		Name:       ProvisionerName,
+		Updated:    obj.Timestamp,
+		CheckSum:   obj.Version,
+	}
+
+	// Use the dashboard provisioning service to save the dashboard
+	p.log.Debug("saving new dashboard", "provisioner", ProvisionerName,
+		"file", path,
+		"folderId", dash.FolderId)
+
+	_, err = dashSvc.SaveProvisionedDashboard(&dto, dp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// PollChanges calls the Provision method on a ticker
 func (p *Provisioner) PollChanges(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(int64(time.Second) * PollingPeriod))
 	for {
@@ -132,21 +149,29 @@ func (p *Provisioner) PollChanges(ctx context.Context) {
 	}
 }
 
+// GetProvisionerResolvedPath returns the path of the config file for the provisioner
+// The VCS provisioner only has one path: vcs.Dashboard
 func (p *Provisioner) GetProvisionerResolvedPath(name string) string {
-	return string(vcs.Dashboard)
+	return fmt.Sprintf("%s/%s/", ProvisionerName, vcs.Dashboard)
 }
 
+// GetAllowUIUpdatesFromConfig returns whether provisioned dashboards for a given provisioner
+// can be updated from frontend or not. Since we handle saving to the VCS storage, it makes
+// sense to allow updates.
 func (p *Provisioner) GetAllowUIUpdatesFromConfig(name string) bool {
 	return true
 }
 
+// CleanUpOrphanedDashboards removes dashboards that are not in the VCS storage anymore
 func (p *Provisioner) CleanUpOrphanedDashboards() {
-
+	// TODO clean up orphaned dashboards
 }
 
-func getProvisionedDashboardsByPath(service dashboards.DashboardProvisioningService, provisionerName string) (
+// getProvisionedDashboardsByPath requests the dashSvc for all provisioning info stored in the database
+// and sort them by path (path ex: "dashboard/xUIhNbu0.json")
+func getProvisionedDashboardsByPath(dashSvc dashboards.DashboardProvisioningService, provisionerName string) (
 	map[string]*models.DashboardProvisioning, error) {
-	arr, err := service.GetProvisionedDashboardData(provisionerName)
+	arr, err := dashSvc.GetProvisionedDashboardData(provisionerName)
 	if err != nil {
 		return nil, err
 	}
@@ -159,6 +184,7 @@ func getProvisionedDashboardsByPath(service dashboards.DashboardProvisioningServ
 	return byPath, nil
 }
 
+// getDashboardPath artificially creates a path to identify the data
 func getDashboardPath(id string) string {
 	return fmt.Sprintf("%s/%s.json", vcs.Dashboard, id)
 }
