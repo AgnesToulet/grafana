@@ -12,7 +12,7 @@ func (hs *HTTPServer) storeObjInVCS(ctx context.Context, kind vcs.Kind, uid stri
 		return nil
 	}
 
-	dashJson, err := json.MarshalIndent(obj, "", "  ")
+	objJson, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		return err
 	}
