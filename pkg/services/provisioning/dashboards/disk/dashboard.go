@@ -81,7 +81,7 @@ func New(configDirectory string, store dashboards.Store) (dashboardprovisioning.
 
 // Provision scans the disk for dashboards and updates
 // the database with the latest versions of those dashboards.
-func (provider *Provisioner) Provision() error {
+func (provider *Provisioner) Provision(_ context.Context) error {
 	for _, reader := range provider.fileReaders {
 		if err := reader.walkDisk(); err != nil {
 			if os.IsNotExist(err) {

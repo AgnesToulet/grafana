@@ -9,7 +9,7 @@ import (
 // DashboardProvisioner is responsible for syncing dashboard from disk to
 // Grafana's database.
 type DashboardProvisioner interface {
-	Provision() error
+	Provision(ctx context.Context) error
 	PollChanges(ctx context.Context)
 	GetProvisionerResolvedPath(name string) string
 	GetAllowUIUpdatesFromConfig(name string) bool

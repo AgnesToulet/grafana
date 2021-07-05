@@ -155,7 +155,7 @@ func (ps *provisioningServiceImpl) ProvisionDashboards() error {
 	ps.cancelPolling()
 	ps.dashProvisioner.CleanUpOrphanedDashboards()
 
-	err := ps.dashProvisioner.Provision()
+	err := ps.dashProvisioner.Provision(context.TODO())
 	if err != nil {
 		// If we fail to provision with the new provisioner, the mutex will unlock and the polling will restart with the
 		// old provisioner as we did not switch them yet.

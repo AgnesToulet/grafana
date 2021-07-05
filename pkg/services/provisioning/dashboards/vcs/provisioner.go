@@ -51,13 +51,13 @@ func (p *Provisioner) IsDisabled() bool {
 }
 
 // Provision provisioned all latest datasources files found in VCS should their version have change
-func (p *Provisioner) Provision() error {
+func (p *Provisioner) Provision(ctx context.Context) error {
 	if p.VCS.IsDisabled() {
 		p.log.Warn("cannot provision, VCS service is disabled")
 		return nil
 	}
 
-	vobjs, err := p.VCS.Latest(context.TODO(), vcs.Dashboard)
+	vobjs, err := p.VCS.Latest(ctx, vcs.Dashboard)
 	if err != nil {
 		p.log.Warn("cannot provision using VCS", err)
 		return nil
@@ -142,7 +142,7 @@ func (p *Provisioner) PollChanges(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			p.Provision()
+			p.Provision(ctx)
 		case <-ctx.Done():
 			return
 		}
@@ -179,7 +179,6 @@ func (p *Provisioner) CleanUpOrphanedDashboards() {
 	provisionedDashboardRefs, err := getProvisionedDashboardsByPath(dashSvc, ProvisionerName)
 
 	for _, obj := range vobjs {
-		// Here we assume the dash.Id is correct => dashboard was saved from grafana
 		path := getDashboardPath(obj.ID)
 
 		// Remove all dashboards we have in store from the map
