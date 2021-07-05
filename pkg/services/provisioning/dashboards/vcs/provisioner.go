@@ -164,7 +164,32 @@ func (p *Provisioner) GetAllowUIUpdatesFromConfig(name string) bool {
 
 // CleanUpOrphanedDashboards removes dashboards that are not in the VCS storage anymore
 func (p *Provisioner) CleanUpOrphanedDashboards() {
-	// TODO clean up orphaned dashboards
+	if p.VCS.IsDisabled() {
+		p.log.Warn("cannot clean up orphaned dashboards, VCS service is disabled")
+		return
+	}
+
+	vobjs, err := p.VCS.Latest(context.TODO(), vcs.Dashboard)
+	if err != nil {
+		p.log.Warn("cannot clean up orphaned dashboards", err)
+		return
+	}
+
+	dashSvc := dashboards.NewProvisioningService(p.Store)
+	provisionedDashboardRefs, err := getProvisionedDashboardsByPath(dashSvc, ProvisionerName)
+
+	for _, obj := range vobjs {
+		// Here we assume the dash.Id is correct => dashboard was saved from grafana
+		path := getDashboardPath(obj.ID)
+
+		// Remove all dashboards we have in store from the map
+		delete(provisionedDashboardRefs, path)
+	}
+
+	// Every remaning dashboard is orphaned
+	for _, orphaned := range provisionedDashboardRefs {
+		err = sqlstore.DeleteDashboard(&models.DeleteDashboardCommand{Id: orphaned.DashboardId})
+	}
 }
 
 // getProvisionedDashboardsByPath requests the dashSvc for all provisioning info stored in the database
