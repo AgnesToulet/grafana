@@ -91,13 +91,12 @@ func setup() *serviceTestStruct {
 	}
 
 	serviceTest.service = newProvisioningServiceImpl(
-		// func(string, dboards.Store) (dashboards.DashboardProvisioner, error) {
-		// 	return serviceTest.mock, nil
-		// },
 		nil,
 		nil,
 	)
 	serviceTest.service.Cfg = setting.NewCfg()
+
+	serviceTest.service.dashProvisioner = serviceTest.mock
 
 	ctx, cancel := context.WithCancel(context.Background())
 	serviceTest.cancel = cancel
