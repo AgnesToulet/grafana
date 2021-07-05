@@ -77,7 +77,7 @@ func TestProvisionAndCleanUpOrphanedFromVCS(t *testing.T) {
 			name: "should work with empty latest",
 		},
 		{
-			name:      "should insert a Random Panel",
+			name:      "should insert a Panel",
 			jsonFiles: map[string]string{"randomdash": "./testdata/random.json"},
 			latest: map[string]vcs.VersionedObject{
 				"randomdash": {
@@ -92,7 +92,7 @@ func TestProvisionAndCleanUpOrphanedFromVCS(t *testing.T) {
 			wantErr:  nil,
 		},
 		{
-			name: "should remove 1 Random Panel",
+			name: "should remove 1 Panel",
 			jsonFiles: map[string]string{
 				"randomdash":  "./testdata/random.json",
 				"randomdash2": "./testdata/random2.json",
