@@ -20,7 +20,7 @@ func (hs *HTTPServer) storeObjInVCS(ctx context.Context, kind vcs.Kind, uid stri
 	vobj := vcs.VersionedObject{
 		ID:   uid,
 		Kind: kind,
-		Data: dashJson,
+		Data: objJson,
 	}
 
 	_, err = hs.VCS.Store(ctx, vobj)
