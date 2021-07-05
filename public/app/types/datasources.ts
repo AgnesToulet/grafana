@@ -4,6 +4,8 @@ import { HealthCheckResultDetails } from '@grafana/runtime/src/utils/DataSourceW
 
 export interface DataSourcesState {
   dataSources: DataSourceSettings[];
+  versions: DataSourceHistoryVersion[];
+  version: DataSourceHistoryVersion;
   searchQuery: string;
   dataSourceTypeSearchQuery: string;
   layoutMode: LayoutMode;
@@ -12,6 +14,7 @@ export interface DataSourcesState {
   dataSourceMeta: DataSourcePluginMeta;
   hasFetched: boolean;
   isLoadingDataSources: boolean;
+  isLoadingHistory: boolean;
   plugins: DataSourcePluginMeta[];
   categories: DataSourcePluginCategory[];
 }
@@ -32,4 +35,10 @@ export interface DataSourcePluginCategory {
   id: string;
   title: string;
   plugins: DataSourcePluginMeta[];
+}
+
+export interface DataSourceHistoryVersion {
+  version: string;
+  timestamp: string;
+  data?: string;
 }

@@ -269,6 +269,9 @@ func (hs *HTTPServer) registerRoutes() {
 			datasourceRoute.Get("/:id", routing.Wrap(GetDataSourceById))
 			datasourceRoute.Get("/uid/:uid", routing.Wrap(GetDataSourceByUID))
 			datasourceRoute.Get("/name/:name", routing.Wrap(GetDataSourceByName))
+			datasourceRoute.Get("/uid/:uid/history", routing.Wrap(hs.GetDataSourceHistory))
+			datasourceRoute.Get("/uid/:uid/version/:version", routing.Wrap(hs.GetDataSourceVersion))
+			datasourceRoute.Put("/:id/restore", bind(models.RestoreDataSourceCommand{}), routing.Wrap(hs.RestoreDataSource))
 		}, reqOrgAdmin)
 
 		apiRoute.Get("/datasources/id/:name", routing.Wrap(GetDataSourceIdByName), reqSignedIn)

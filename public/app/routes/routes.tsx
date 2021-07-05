@@ -91,6 +91,12 @@ export function getAppRoutes(): RouteDescriptor[] {
       ),
     },
     {
+      path: '/datasources/edit/:uid/history',
+      component: SafeDynamicImport(
+        () => import(/* webpackChunkName: "DataSourceHistory"*/ 'app/features/datasources/DataSourceHistory')
+      ),
+    },
+    {
       path: '/datasources/new',
       component: SafeDynamicImport(
         () => import(/* webpackChunkName: "NewDataSourcePage"*/ '../features/datasources/NewDataSourcePage')

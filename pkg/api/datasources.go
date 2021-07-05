@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 
 	"github.com/grafana/grafana/pkg/api/datasource"
@@ -235,6 +237,27 @@ func (hs *HTTPServer) AddDataSource(c *models.ReqContext, cmd models.AddDataSour
 		"name":       cmd.Result.Name,
 		"datasource": ds,
 	})
+}
+
+func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSource) error {
+	if gitops, ok := hs.Cfg.FeatureToggles["gitops"]; !ok || !gitops || hs.PluginManager.VersionedControlStorage() == nil {
+		return nil
+	}
+
+	dsJson, err := json.MarshalIndent(ds, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	vobj := vcs.VersionedObject{
+		ID:   ds.Uid,
+		Kind: vcs.Datasource,
+		Data: dsJson,
+	}
+
+	_, err = hs.VCS.Store(ctx, vobj)
+
+	return err
 }
 
 func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDataSourceCommand) response.Response {
@@ -492,4 +515,100 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 	}
 
 	return response.JSON(200, payload)
+}
+
+// Get /api/datasources/uid/:uid/history
+func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Response {
+	if hs.PluginManager.VersionedControlStorage() == nil {
+		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	}
+
+	vObjs, err := hs.VCS.History(c.Req.Context(), vcs.Datasource, c.Params(":uid"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	result := make([]vcs.VersionedObjectDTO, len(vObjs))
+	for i, vObj := range vObjs {
+		result[i] = vcs.VersionedObjectDTO{
+			ID:        vObj.ID,
+			Version:   vObj.Version,
+			Timestamp: vObj.Timestamp,
+		}
+	}
+
+	return response.JSON(200, result)
+}
+
+// Get /api/datasources/uid/:uid/version/:version
+func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Response {
+	if hs.PluginManager.VersionedControlStorage() == nil {
+		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	}
+
+	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, c.Params(":uid"), c.Params(":version"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	return response.JSON(200, vcs.VersionedObjectDTO{
+		ID:        vObj.ID,
+		Version:   vObj.Version,
+		Data:      string(vObj.Data),
+		Timestamp: vObj.Timestamp,
+	})
+}
+
+// PUT /api/datasources/:id/restore
+func (hs *HTTPServer) RestoreDataSource(c *models.ReqContext, cmd models.RestoreDataSourceCommand) response.Response {
+	if hs.PluginManager.VersionedControlStorage() == nil {
+		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	}
+
+	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, cmd.UID, cmd.Version)
+	if err != nil || vObj == nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource version", err)
+	}
+
+	updateCmd, err := parseDatasource(*vObj)
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to parse version", err)
+	}
+
+	return hs.UpdateDataSource(c, *updateCmd)
+}
+
+func parseDatasource(obj vcs.VersionedObject) (*models.UpdateDataSourceCommand, error) {
+	ds := models.DataSource{}
+
+	err := json.Unmarshal(obj.Data, &ds)
+	if err != nil {
+		return nil, err
+	}
+
+	var secureJsonData map[string]string
+	for k, v := range ds.SecureJsonData {
+		secureJsonData[k] = string(v)
+	}
+
+	dsCfg := models.UpdateDataSourceCommand{
+		Name:              ds.Name,
+		Type:              ds.Type,
+		Access:            models.DsAccess(ds.Access),
+		Url:               ds.Url,
+		Password:          ds.Password,
+		User:              ds.User,
+		Database:          ds.Database,
+		BasicAuth:         ds.BasicAuth,
+		BasicAuthUser:     ds.BasicAuthUser,
+		BasicAuthPassword: ds.BasicAuthPassword,
+		WithCredentials:   ds.WithCredentials,
+		IsDefault:         ds.IsDefault, // TODO: check if we are not setting 2 DS as default
+		JsonData:          ds.JsonData,
+		SecureJsonData:    secureJsonData,
+		Uid:               ds.Uid,
+		ReadOnly:          ds.ReadOnly,
+	}
+
+	return &dsCfg, nil
 }
