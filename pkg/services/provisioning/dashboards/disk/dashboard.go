@@ -10,7 +10,6 @@ import (
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/registry"
-	dashboardprovisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util/errutil"
@@ -54,29 +53,6 @@ func (p *Provisioner) Init() error {
 	p.configs = configs
 
 	return nil
-}
-
-// New returns a new DashboardProvisioner
-func New(configDirectory string, store dashboards.Store) (dashboardprovisioning.DashboardProvisioner, error) {
-	logger := log.New("provisioning.dashboard")
-	cfgReader := &configReader{path: configDirectory, log: logger}
-	configs, err := cfgReader.readConfig()
-	if err != nil {
-		return nil, errutil.Wrap("Failed to read dashboards config", err)
-	}
-
-	fileReaders, err := getFileReaders(configs, logger, store)
-	if err != nil {
-		return nil, errutil.Wrap("Failed to initialize file readers", err)
-	}
-
-	d := &Provisioner{
-		log:         logger,
-		fileReaders: fileReaders,
-		configs:     configs,
-	}
-
-	return d, nil
 }
 
 // Provision scans the disk for dashboards and updates
