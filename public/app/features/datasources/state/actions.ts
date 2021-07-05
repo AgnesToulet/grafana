@@ -269,7 +269,9 @@ export function restoreDataSourceVersion(
       version: version.version,
     });
     await updateFrontendSettings();
-    return dispatch(loadDataSource(dataSource.uid));
+
+    dispatch(loadDataSource(dataSource.uid));
+    dispatch(loadDataSourceHistory());
   };
 }
 

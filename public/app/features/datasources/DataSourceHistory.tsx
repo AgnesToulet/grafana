@@ -1,7 +1,6 @@
 // Libraries
 import React, { PureComponent } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
-import AutoSizer from 'react-virtualized-auto-sizer';
 import { dateTimeFormat } from '@grafana/data';
 
 // Components
@@ -63,19 +62,27 @@ export class DataSourceHistory extends PureComponent<Props, State> {
     this.props.loadDataSourceHistory();
   }
 
-  showVersionModal = (show: boolean) => () => {
+  showVersionModal = (show: boolean) => {
     this.setState({ showVersionModal: show });
   };
 
   onRestore = (version: DataSourceHistoryVersion) => {
     const { dataSource, restoreDataSourceVersion } = this.props;
     restoreDataSourceVersion(dataSource, version);
+
+    if (this.state.showVersionModal) {
+      this.showVersionModal(false);
+    }
   };
 
   onView = async (version: DataSourceHistoryVersion) => {
     const { loadDataSourceVersion } = this.props;
     await loadDataSourceVersion(version);
-    this.showVersionModal(true)();
+    this.showVersionModal(true);
+  };
+
+  onDismissModal = () => {
+    this.showVersionModal(false);
   };
 
   render() {
@@ -102,13 +109,15 @@ export class DataSourceHistory extends PureComponent<Props, State> {
                     </td>
                     <td>{version.version}</td>
                     <td>{dateTimeFormat(parseInt(version.timestamp, 10) * 1000)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <Button icon="history" variant="primary" size="sm" onClick={() => this.onRestore(version)}>
-                        Restore
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={() => this.onView(version)}>
-                        View
-                      </Button>
+                    <td>
+                      <HorizontalGroup spacing="md" justify="flex-end">
+                        <Button icon="history" variant="primary" size="sm" onClick={() => this.onRestore(version)}>
+                          Restore
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => this.onView(version)}>
+                          View
+                        </Button>
+                      </HorizontalGroup>
                     </td>
                   </tr>
                 );
@@ -118,7 +127,7 @@ export class DataSourceHistory extends PureComponent<Props, State> {
           <VersionModal
             isOpen={showVersionModal}
             version={version}
-            onDismiss={this.showVersionModal(false)}
+            onDismiss={this.onDismissModal}
             onRestore={this.onRestore}
           />
         </Page.Contents>
@@ -137,20 +146,17 @@ interface VersionModalProps {
 const VersionModal = ({ version, isOpen, onDismiss, onRestore }: VersionModalProps) => {
   return (
     <Modal title={`Version ${version.version}`} isOpen={isOpen} onDismiss={onDismiss}>
-      <AutoSizer>
-        {({ width, height }) => (
-          <CodeEditor
-            value={version.data || ''}
-            language="json"
-            width={width}
-            height={height}
-            showMiniMap={true}
-            showLineNumbers={true}
-          />
-        )}
-      </AutoSizer>
+      <CodeEditor
+        value={version.data || ''}
+        language="json"
+        width="100%"
+        height="400px"
+        showMiniMap={true}
+        showLineNumbers={true}
+        readOnly={true}
+      />
       <Modal.ButtonRow>
-        <HorizontalGroup spacing="md" justify="center">
+        <HorizontalGroup spacing="md">
           <Button variant="primary" onClick={() => onRestore(version)}>
             Restore
           </Button>
