@@ -271,7 +271,7 @@ func (hs *HTTPServer) UpdateDataSource(c *models.ReqContext, cmd models.UpdateDa
 	}
 
 	// Persist the datasource in VCS
-	if err := hs.storeObjInVCS(c.Req.Context(), vcs.Dashboard, cmd.Result.Uid, *cmd.Result); err != nil {
+	if err := hs.storeObjInVCS(c.Req.Context(), vcs.Datasource, cmd.Result.Uid, *cmd.Result); err != nil {
 		hs.log.Warn("could not store datasource in VCS", err)
 	}
 
