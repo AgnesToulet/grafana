@@ -51,11 +51,26 @@ func populateLatestFromFiles(t *testing.T, jsonFiles map[string]string, latest m
 	}
 }
 
-func TestProvisionFromVCS(t *testing.T) {
+func removeElementsFromLatest(t *testing.T, latest map[string]vcs.VersionedObject, toRemove map[string]empty) map[string]vcs.VersionedObject {
+	newLatest := map[string]vcs.VersionedObject{}
+
+	for k, v := range latest {
+		if _, ok := toRemove[k]; !ok {
+			newLatest[k] = v
+		}
+	}
+
+	return newLatest
+}
+
+type empty struct{}
+
+func TestProvisionAndCleanUpOrphanedFromVCS(t *testing.T) {
 	tt := []struct {
 		name      string
 		jsonFiles map[string]string
 		latest    map[string]vcs.VersionedObject
+		toRemove  map[string]empty
 		wantErr   error
 	}{
 		{
@@ -73,7 +88,33 @@ func TestProvisionFromVCS(t *testing.T) {
 					Timestamp: 0,
 				},
 			},
-			wantErr: nil,
+			toRemove: nil,
+			wantErr:  nil,
+		},
+		{
+			name: "should remove 1 Random Panel",
+			jsonFiles: map[string]string{
+				"randomdash":  "./testdata/random.json",
+				"randomdash2": "./testdata/random2.json",
+			},
+			latest: map[string]vcs.VersionedObject{
+				"randomdash": {
+					ID:        "randomdash",
+					Version:   "testsha",
+					Kind:      vcs.Dashboard,
+					Data:      []byte{},
+					Timestamp: 0,
+				},
+				"randomdash2": {
+					ID:        "randomdash2",
+					Version:   "testsha2",
+					Kind:      vcs.Dashboard,
+					Data:      []byte{},
+					Timestamp: 0,
+				},
+			},
+			toRemove: map[string]empty{"randomdash": {}},
+			wantErr:  nil,
 		},
 	}
 	for _, tc := range tt {
@@ -102,6 +143,21 @@ func TestProvisionFromVCS(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Len(t, dashProvisioningInfo, len(tc.latest))
+
+			// Test removal
+			newLatest := removeElementsFromLatest(t, tc.latest, tc.toRemove)
+
+			vcsMock.LatestFunc = func(c context.Context, k vcs.Kind) (map[string]vcs.VersionedObject, error) {
+				return newLatest, nil
+			}
+
+			// Remove orphaned dashboards
+			dashProv.CleanUpOrphanedDashboards()
+
+			dashProvisioningInfo, err = dashSvc.GetProvisionedDashboardData(ProvisionerName)
+			require.NoError(t, err)
+
+			assert.Len(t, dashProvisioningInfo, len(tc.latest)-len(tc.toRemove))
 		})
 	}
 }
