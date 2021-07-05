@@ -80,7 +80,7 @@ func parseDatasource(apiVersion int64, obj vcs.VersionedObject) (*datasources.Up
 		return nil, fmt.Errorf("manage to unmarshal datasource but could not unmarshal jsonData: %w", err)
 	}
 
-	var secureJsonData map[string]string
+	secureJsonData := make(map[string]string)
 	for k, v := range ds.SecureJsonData {
 		secureJsonData[k] = string(v)
 	}
