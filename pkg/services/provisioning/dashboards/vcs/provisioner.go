@@ -59,7 +59,7 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 
 	vobjs, err := p.VCS.Latest(ctx, vcs.Dashboard)
 	if err != nil {
-		p.log.Warn("cannot provision using VCS", err)
+		p.log.Warn("cannot provision using VCS", "err", err)
 		return nil
 	}
 
