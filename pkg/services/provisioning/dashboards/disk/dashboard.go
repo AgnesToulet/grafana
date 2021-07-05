@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/dashboards"
@@ -35,7 +36,7 @@ func init() {
 
 func (p *Provisioner) Init() error {
 	logger := log.New("dashboards.provisioner")
-	configDirectory := p.Cfg.ProvisioningPath + "dashboards"
+	configDirectory := filepath.Join(p.Cfg.ProvisioningPath, "datasources")
 
 	cfgReader := &configReader{path: configDirectory, log: logger}
 
