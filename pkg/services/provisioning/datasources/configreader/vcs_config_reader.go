@@ -25,7 +25,7 @@ func (cr *vcsConfigReader) ReadConfigs(ctx context.Context) ([]*datasources.Conf
 	// Get all versioned datasources
 	datasourcesMap, err := cr.vcs.Latest(ctx, vcs.Datasource)
 	if err != nil {
-		cr.log.Warn("cannot provision using VCS", err)
+		cr.log.Warn("cannot provision using VCS", "err", err)
 		return nil, nil
 	}
 	if len(datasourcesMap) == 0 {
