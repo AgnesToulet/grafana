@@ -65,6 +65,9 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 
 	dashSvc := dashboards.NewProvisioningService(p.Store)
 	provisionedDashboardRefs, err := getProvisionedDashboardsByPath(dashSvc, ProvisionerName)
+	if err != nil {
+		return err
+	}
 
 	for _, obj := range vobjs {
 		// Here we assume the dash.Id is correct => dashboard was saved from grafana
