@@ -148,6 +148,7 @@ func (ps *provisioningServiceImpl) ProvisionNotifications() error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDashboards() error {
+	// TODO read configs when provisioning using the disk service.
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
