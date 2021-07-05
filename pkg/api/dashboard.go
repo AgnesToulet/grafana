@@ -361,7 +361,7 @@ func (hs *HTTPServer) PostDashboard(c *models.ReqContext, cmd models.SaveDashboa
 
 	// Persist the dashboard in VCS
 	if err = hs.storeObjInVCS(c.Req.Context(), vcs.Dashboard, dashboard.Uid, *dashboard); err != nil {
-		hs.log.Warn("could not store dashboard in VCS", err)
+		hs.log.Warn("could not store dashboard in VCS", "err", err)
 	}
 
 	if hs.Cfg.EditorsCanAdmin && newDashboard {
