@@ -243,7 +243,7 @@ func (hs *HTTPServer) StoreDataSourceInVCS(ctx context.Context, ds models.DataSo
 		return nil
 	}
 
-	dsJson, err := json.Marshal(ds)
+	dsJson, err := json.MarshalIndent(ds, "", "  ")
 	if err != nil {
 		return err
 	}
