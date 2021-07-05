@@ -18,7 +18,7 @@ import (
 
 const (
 	ProvisionerName = "gitops-vcs-provisioning"
-	PollingPeriod   = 5 // Todo make this configurable
+	PollingPeriod   = 300 // Todo make this configurable
 )
 
 type Provisioner struct {
@@ -41,6 +41,12 @@ func init() {
 func (p *Provisioner) Init() error {
 	p.log = log.New("dashboards.provisioner")
 	return nil
+}
+
+func (p *Provisioner) IsDisabled() bool {
+	_, gitops := p.Cfg.FeatureToggles["gitops"]
+
+	return !gitops
 }
 
 func (p *Provisioner) Provision() error {

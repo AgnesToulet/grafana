@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	dboards "github.com/grafana/grafana/pkg/dashboards"
-	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
 	dashboardprovmock "github.com/grafana/grafana/pkg/services/provisioning/dashboards/mock"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/stretchr/testify/assert"
@@ -93,9 +91,9 @@ func setup() *serviceTestStruct {
 	}
 
 	serviceTest.service = newProvisioningServiceImpl(
-		func(string, dboards.Store) (dashboards.DashboardProvisioner, error) {
-			return serviceTest.mock, nil
-		},
+		// func(string, dboards.Store) (dashboards.DashboardProvisioner, error) {
+		// 	return serviceTest.mock, nil
+		// },
 		nil,
 		nil,
 	)

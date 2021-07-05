@@ -9,15 +9,51 @@ import (
 	"github.com/grafana/grafana/pkg/dashboards"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/registry"
 	dashboardprovisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
+	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util/errutil"
 )
 
 // Provisioner is responsible for syncing dashboard from disk to Grafana's database.
 type Provisioner struct {
+	Cfg         *setting.Cfg       `inject:""`
+	Store       *sqlstore.SQLStore `inject:""`
 	log         log.Logger
 	fileReaders []*FileReader
 	configs     []*config
+}
+
+func init() {
+	registry.Register(&registry.Descriptor{
+		Name:         "Dashboard provisioning",
+		Instance:     &Provisioner{},
+		InitPriority: registry.Low + 1,
+	})
+}
+
+func (p *Provisioner) Init() error {
+	logger := log.New("dashboards.provisioner")
+	configDirectory := p.Cfg.ProvisioningPath + "dashboards"
+
+	cfgReader := &configReader{path: configDirectory, log: logger}
+
+	configs, err := cfgReader.readConfig()
+	if err != nil {
+		return errutil.Wrap("Failed to read dashboards config", err)
+	}
+
+	fileReaders, err := getFileReaders(configs, logger, p.Store)
+	if err != nil {
+		return errutil.Wrap("Failed to initialize file readers", err)
+	}
+
+	p.log = logger
+	p.fileReaders = fileReaders
+	p.configs = configs
+
+	return nil
 }
 
 // New returns a new DashboardProvisioner
