@@ -138,15 +138,17 @@ func (p *Provisioner) saveProvisionedDashboard(dashSvc dashboards.DashboardProvi
 
 // PollChanges calls the Provision method on a ticker
 func (p *Provisioner) PollChanges(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(int64(time.Second) * PollingPeriod))
-	for {
-		select {
-		case <-ticker.C:
-			p.Provision(ctx)
-		case <-ctx.Done():
-			return
+	go func() {
+		ticker := time.NewTicker(time.Duration(int64(time.Second) * PollingPeriod))
+		for {
+			select {
+			case <-ticker.C:
+				p.Provision(ctx)
+			case <-ctx.Done():
+				return
+			}
 		}
-	}
+	}()
 }
 
 // GetProvisionerResolvedPath returns the path of the config file for the provisioner

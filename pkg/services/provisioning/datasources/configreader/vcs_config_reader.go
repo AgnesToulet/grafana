@@ -80,11 +80,6 @@ func parseDatasource(apiVersion int64, obj vcs.VersionedObject) (*datasources.Up
 		return nil, fmt.Errorf("manage to unmarshal datasource but could not unmarshal jsonData: %w", err)
 	}
 
-	secureJsonData := make(map[string]string)
-	for k, v := range ds.SecureJsonData {
-		secureJsonData[k] = string(v)
-	}
-
 	dsCfg := datasources.UpsertDataSourceFromConfig{
 		OrgID:             ds.OrgId,
 		Version:           ds.Version,
@@ -101,7 +96,7 @@ func parseDatasource(apiVersion int64, obj vcs.VersionedObject) (*datasources.Up
 		WithCredentials:   ds.WithCredentials,
 		IsDefault:         ds.IsDefault,
 		JSONData:          jsonData,
-		SecureJSONData:    secureJsonData,
+		SecureJSONData:    ds.SecureJsonData.Decrypt(),
 		Editable:          !ds.ReadOnly,
 		UID:               ds.Uid,
 	}
