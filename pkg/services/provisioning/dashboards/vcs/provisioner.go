@@ -176,7 +176,7 @@ func (p *Provisioner) CleanUpOrphanedDashboards() {
 
 	vobjs, err := p.VCS.Latest(context.TODO(), vcs.Dashboard)
 	if err != nil {
-		p.log.Warn("cannot clean up orphaned dashboards", err)
+		p.log.Warn("cannot clean up orphaned dashboards", "err", err)
 		return
 	}
 
