@@ -26,6 +26,7 @@ export function buildNavModel(dataSource: DataSourceSettings, plugin: GenericDat
         id: `datasource-history-${dataSource.uid}`,
         text: 'History',
         url: `datasources/edit/${dataSource.uid}/history`,
+        hideFromTabs: !config.featureToggles.gitops,
       },
     ],
   };

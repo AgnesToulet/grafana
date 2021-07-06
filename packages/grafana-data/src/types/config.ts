@@ -47,6 +47,7 @@ export interface FeatureToggles {
   ngalert: boolean;
   trimDefaults: boolean;
   accesscontrol: boolean;
+  gitops: boolean;
 
   /**
    * @remarks
