@@ -9,17 +9,24 @@ import (
 var _ vcs.Service = &VCSServiceMock{}
 
 type Calls struct {
-	Store   []interface{}
-	Latest  []interface{}
-	History []interface{}
+	Store      []interface{}
+	Latest     []interface{}
+	History    []interface{}
+	IsDisabled []interface{}
 }
 
 // VCSServiceMock is a mock implementation of the VCS Service
 type VCSServiceMock struct {
-	Calls       *Calls
-	StoreFunc   func(context.Context, vcs.VersionedObject) (*vcs.VersionedObject, error)
-	LatestFunc  func(context.Context, vcs.Kind) (map[string]vcs.VersionedObject, error)
-	HistoryFunc func(context.Context, vcs.Kind, string) ([]vcs.VersionedObject, error)
+	Calls          *Calls
+	StoreFunc      func(context.Context, vcs.VersionedObject) (*vcs.VersionedObject, error)
+	LatestFunc     func(context.Context, vcs.Kind) (map[string]vcs.VersionedObject, error)
+	HistoryFunc    func(context.Context, vcs.Kind, string) ([]vcs.VersionedObject, error)
+	IsDisabledFunc func() bool
+}
+
+func NewVCSMock() *VCSServiceMock {
+	calls := &Calls{}
+	return &VCSServiceMock{Calls: calls}
 }
 
 func (m *VCSServiceMock) Store(ctx context.Context, vObj vcs.VersionedObject) (*vcs.VersionedObject, error) {
@@ -44,4 +51,12 @@ func (m *VCSServiceMock) History(ctx context.Context, kind vcs.Kind, ID string) 
 		return m.HistoryFunc(ctx, kind, ID)
 	}
 	return nil, nil
+}
+
+func (m *VCSServiceMock) IsDisabled() bool {
+	m.Calls.IsDisabled = append(m.Calls.IsDisabled, []interface{}{})
+	if m.IsDisabledFunc != nil {
+		return m.IsDisabledFunc()
+	}
+	return true
 }

@@ -1,6 +1,6 @@
 // +build linux
 
-package dashboards
+package disk
 
 import (
 	"path/filepath"
