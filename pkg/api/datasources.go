@@ -584,11 +584,6 @@ func parseDatasource(obj vcs.VersionedObject) (*models.UpdateDataSourceCommand, 
 		return nil, err
 	}
 
-	var secureJsonData map[string]string
-	for k, v := range ds.SecureJsonData {
-		secureJsonData[k] = string(v)
-	}
-
 	dsCfg := models.UpdateDataSourceCommand{
 		Name:              ds.Name,
 		Type:              ds.Type,
@@ -603,7 +598,7 @@ func parseDatasource(obj vcs.VersionedObject) (*models.UpdateDataSourceCommand, 
 		WithCredentials:   ds.WithCredentials,
 		IsDefault:         ds.IsDefault, // TODO: check if we are not setting 2 DS as default
 		JsonData:          ds.JsonData,
-		SecureJsonData:    secureJsonData,
+		SecureJsonData:    ds.SecureJsonData.Decrypt(),
 		Uid:               ds.Uid,
 		ReadOnly:          ds.ReadOnly,
 	}
