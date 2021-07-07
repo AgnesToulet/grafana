@@ -497,8 +497,8 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 
 // Get /api/datasources/uid/:uid/history
 func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Response {
-	if hs.PluginManager.VersionedControlStorage() == nil {
-		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
 	}
 
 	vObjs, err := hs.VCS.History(c.Req.Context(), vcs.Datasource, c.Params(":uid"))
@@ -520,8 +520,8 @@ func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Respon
 
 // Get /api/datasources/uid/:uid/version/:version
 func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Response {
-	if hs.PluginManager.VersionedControlStorage() == nil {
-		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
 	}
 
 	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, c.Params(":uid"), c.Params(":version"))
@@ -539,8 +539,8 @@ func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Respon
 
 // PUT /api/datasources/:id/restore
 func (hs *HTTPServer) RestoreDataSource(c *models.ReqContext, cmd models.RestoreDataSourceCommand) response.Response {
-	if hs.PluginManager.VersionedControlStorage() == nil {
-		return response.Error(http.StatusBadRequest, "No versioned control storage plugin found", nil)
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
 	}
 
 	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, cmd.UID, cmd.Version)
