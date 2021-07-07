@@ -144,6 +144,11 @@ type DeleteDataSourceCommand struct {
 	DeletedDatasourcesCount int64
 }
 
+type RestoreDataSourceCommand struct {
+	UID     string `json:"uid" binding:"Required"`
+	Version string `json:"version" binding:"Required"`
+}
+
 // ---------------------
 // QUERIES
 

@@ -12,6 +12,15 @@ import ErrorPage from 'app/core/components/ErrorPage/ErrorPage';
 export const extraRoutes: RouteDescriptor[] = [];
 
 export function getAppRoutes(): RouteDescriptor[] {
+  if (config.featureToggles.gitops) {
+    extraRoutes.push({
+      path: '/datasources/edit/:uid/history',
+      component: SafeDynamicImport(
+        () => import(/* webpackChunkName: "DataSourceHistory"*/ 'app/features/datasources/DataSourceHistory')
+      ),
+    });
+  }
+
   return [
     {
       path: '/',

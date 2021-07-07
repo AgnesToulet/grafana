@@ -48,8 +48,21 @@ message HistoryResponse {
   repeated VersionedObject versionedObjects = 2;
 }
 
+message GetRequest {
+  AppInstanceSettings appInstanceSettings = 1;
+  string kind = 2;
+  string id = 3;
+  string version = 4;
+}
+
+message GetResponse {
+  string error = 1;
+  VersionedObject versionedObject = 2;
+}
+
 service VersionedStorage {
   rpc Store(StoreRequest) returns (StoreResponse);
   rpc Latest(LatestRequest) returns (LatestResponse);
   rpc History(HistoryRequest) returns (HistoryResponse);
+  rpc Get(GetRequest) returns (GetResponse);
 }

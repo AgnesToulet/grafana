@@ -150,6 +150,37 @@ func (vs *PluginService) History(ctx context.Context, kind Kind, ID string) ([]V
 	return versionedObjects, nil
 }
 
+func (vs *PluginService) Get(ctx context.Context, kind Kind, ID string, version string) (*VersionedObject, error) {
+	if vs.plugin == nil {
+		vs.log.Warn("VCS plugin has not been instantiated correctly")
+		return nil, nil
+	}
+	appInstanceSettings, err := vs.appInstanceSettings(vs.plugin.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	req := &pluginextensionv2.GetRequest{
+		AppInstanceSettings: appInstanceSettings,
+		Kind:                string(kind),
+		Id:                  ID,
+		Version:             version,
+	}
+
+	resp, err := vs.plugin.GRPCPlugin.Get(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Error != "" {
+		return nil, fmt.Errorf("retrieving version from versioned control storage failed: %s", resp.Error)
+	}
+
+	vObj := fromPluginVersionedObject(resp.VersionedObject)
+
+	return &vObj, nil
+}
+
 const appSettingsMainOrg = 1
 const appSettingsCacheTTL = 5 * time.Second
 const appSettingsCachePrefix = "app-setting-"

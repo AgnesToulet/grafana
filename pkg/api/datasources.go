@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sort"
 
 	"github.com/grafana/grafana/pkg/api/datasource"
@@ -492,4 +493,95 @@ func (hs *HTTPServer) CheckDatasourceHealth(c *models.ReqContext) response.Respo
 	}
 
 	return response.JSON(200, payload)
+}
+
+// Get /api/datasources/uid/:uid/history
+func (hs *HTTPServer) GetDataSourceHistory(c *models.ReqContext) response.Response {
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
+	}
+
+	vObjs, err := hs.VCS.History(c.Req.Context(), vcs.Datasource, c.Params(":uid"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	result := make([]vcs.VersionedObjectDTO, len(vObjs))
+	for i, vObj := range vObjs {
+		result[i] = vcs.VersionedObjectDTO{
+			ID:        vObj.ID,
+			Version:   vObj.Version,
+			Timestamp: vObj.Timestamp,
+		}
+	}
+
+	return response.JSON(200, result)
+}
+
+// Get /api/datasources/uid/:uid/version/:version
+func (hs *HTTPServer) GetDataSourceVersion(c *models.ReqContext) response.Response {
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
+	}
+
+	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, c.Params(":uid"), c.Params(":version"))
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource history", err)
+	}
+
+	return response.JSON(200, vcs.VersionedObjectDTO{
+		ID:        vObj.ID,
+		Version:   vObj.Version,
+		Data:      string(vObj.Data),
+		Timestamp: vObj.Timestamp,
+	})
+}
+
+// PUT /api/datasources/:id/restore
+func (hs *HTTPServer) RestoreDataSource(c *models.ReqContext, cmd models.RestoreDataSourceCommand) response.Response {
+	if hs.VCS.IsDisabled() {
+		return response.Error(http.StatusBadRequest, "Versioned control storage service is disabled", nil)
+	}
+
+	vObj, err := hs.VCS.Get(c.Req.Context(), vcs.Datasource, cmd.UID, cmd.Version)
+	if err != nil || vObj == nil {
+		return response.Error(http.StatusInternalServerError, "Failed to retrieve datasource version", err)
+	}
+
+	updateCmd, err := parseDatasource(*vObj)
+	if err != nil {
+		return response.Error(http.StatusInternalServerError, "Failed to parse version", err)
+	}
+
+	return hs.UpdateDataSource(c, *updateCmd)
+}
+
+func parseDatasource(obj vcs.VersionedObject) (*models.UpdateDataSourceCommand, error) {
+	ds := models.DataSource{}
+
+	err := json.Unmarshal(obj.Data, &ds)
+	if err != nil {
+		return nil, err
+	}
+
+	dsCfg := models.UpdateDataSourceCommand{
+		Name:              ds.Name,
+		Type:              ds.Type,
+		Access:            models.DsAccess(ds.Access),
+		Url:               ds.Url,
+		Password:          ds.Password,
+		User:              ds.User,
+		Database:          ds.Database,
+		BasicAuth:         ds.BasicAuth,
+		BasicAuthUser:     ds.BasicAuthUser,
+		BasicAuthPassword: ds.BasicAuthPassword,
+		WithCredentials:   ds.WithCredentials,
+		IsDefault:         ds.IsDefault, // TODO: check if we are not setting 2 DS as default
+		JsonData:          ds.JsonData,
+		SecureJsonData:    ds.SecureJsonData.Decrypt(),
+		Uid:               ds.Uid,
+		ReadOnly:          ds.ReadOnly,
+	}
+
+	return &dsCfg, nil
 }

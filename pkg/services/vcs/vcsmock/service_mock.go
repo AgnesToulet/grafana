@@ -12,6 +12,7 @@ type Calls struct {
 	Store      []interface{}
 	Latest     []interface{}
 	History    []interface{}
+	Get        []interface{}
 	IsDisabled []interface{}
 }
 
@@ -21,6 +22,7 @@ type VCSServiceMock struct {
 	StoreFunc      func(context.Context, vcs.VersionedObject) (*vcs.VersionedObject, error)
 	LatestFunc     func(context.Context, vcs.Kind) (map[string]vcs.VersionedObject, error)
 	HistoryFunc    func(context.Context, vcs.Kind, string) ([]vcs.VersionedObject, error)
+	GetFunc        func(context.Context, vcs.Kind, string, string) (*vcs.VersionedObject, error)
 	IsDisabledFunc func() bool
 }
 
@@ -49,6 +51,14 @@ func (m *VCSServiceMock) History(ctx context.Context, kind vcs.Kind, ID string) 
 	m.Calls.History = append(m.Calls.History, []interface{}{ctx, kind, ID})
 	if m.HistoryFunc != nil {
 		return m.HistoryFunc(ctx, kind, ID)
+	}
+	return nil, nil
+}
+
+func (m *VCSServiceMock) Get(ctx context.Context, kind vcs.Kind, ID string, version string) (*vcs.VersionedObject, error) {
+	m.Calls.Get = append(m.Calls.Get, []interface{}{ctx, kind, ID, version})
+	if m.GetFunc != nil {
+		return m.GetFunc(ctx, kind, ID, version)
 	}
 	return nil, nil
 }
