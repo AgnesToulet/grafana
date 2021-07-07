@@ -1,63 +1,64 @@
-package dashboards
+package disk
 
 import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/dashboards"
 	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/registry"
+	"github.com/grafana/grafana/pkg/services/sqlstore"
+	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util/errutil"
 )
 
-// DashboardProvisioner is responsible for syncing dashboard from disk to
-// Grafana's database.
-type DashboardProvisioner interface {
-	Provision() error
-	PollChanges(ctx context.Context)
-	GetProvisionerResolvedPath(name string) string
-	GetAllowUIUpdatesFromConfig(name string) bool
-	CleanUpOrphanedDashboards()
-}
-
-// DashboardProvisionerFactory creates DashboardProvisioners based on input
-type DashboardProvisionerFactory func(string, dashboards.Store) (DashboardProvisioner, error)
-
 // Provisioner is responsible for syncing dashboard from disk to Grafana's database.
 type Provisioner struct {
+	Cfg         *setting.Cfg       `inject:""`
+	Store       *sqlstore.SQLStore `inject:""`
 	log         log.Logger
 	fileReaders []*FileReader
 	configs     []*config
 }
 
-// New returns a new DashboardProvisioner
-func New(configDirectory string, store dashboards.Store) (DashboardProvisioner, error) {
-	logger := log.New("provisioning.dashboard")
+func init() {
+	registry.Register(&registry.Descriptor{
+		Name:         "Dashboard provisioning",
+		Instance:     &Provisioner{},
+		InitPriority: registry.Low + 1,
+	})
+}
+
+func (p *Provisioner) Init() error {
+	logger := log.New("dashboards.provisioner")
+	configDirectory := filepath.Join(p.Cfg.ProvisioningPath, "dashboards")
+
 	cfgReader := &configReader{path: configDirectory, log: logger}
+
 	configs, err := cfgReader.readConfig()
 	if err != nil {
-		return nil, errutil.Wrap("Failed to read dashboards config", err)
+		return errutil.Wrap("Failed to read dashboards config", err)
 	}
 
-	fileReaders, err := getFileReaders(configs, logger, store)
+	fileReaders, err := getFileReaders(configs, logger, p.Store)
 	if err != nil {
-		return nil, errutil.Wrap("Failed to initialize file readers", err)
+		return errutil.Wrap("Failed to initialize file readers", err)
 	}
 
-	d := &Provisioner{
-		log:         logger,
-		fileReaders: fileReaders,
-		configs:     configs,
-	}
+	p.log = logger
+	p.fileReaders = fileReaders
+	p.configs = configs
 
-	return d, nil
+	return nil
 }
 
 // Provision scans the disk for dashboards and updates
 // the database with the latest versions of those dashboards.
-func (provider *Provisioner) Provision() error {
+func (provider *Provisioner) Provision(_ context.Context) error {
 	for _, reader := range provider.fileReaders {
 		if err := reader.walkDisk(); err != nil {
 			if os.IsNotExist(err) {

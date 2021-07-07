@@ -8,7 +8,9 @@ import (
 	"github.com/grafana/grafana/pkg/infra/log"
 	plugifaces "github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/registry"
-	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	dashProvisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	diskDashProvisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards/disk"
+	vcsDashProvisioning "github.com/grafana/grafana/pkg/services/provisioning/dashboards/vcs"
 	datasources "github.com/grafana/grafana/pkg/services/provisioning/datasources/provisioner"
 	"github.com/grafana/grafana/pkg/services/provisioning/notifiers"
 	"github.com/grafana/grafana/pkg/services/provisioning/plugins"
@@ -39,42 +41,44 @@ func init() {
 // Add a public constructor for overriding service to be able to instantiate OSS as fallback
 func NewProvisioningServiceImpl() *provisioningServiceImpl {
 	return &provisioningServiceImpl{
-		log:                     log.New("provisioning"),
-		newDashboardProvisioner: dashboards.New,
-		provisionNotifiers:      notifiers.Provision,
-		provisionPlugins:        plugins.Provision,
+		log:                log.New("provisioning"),
+		provisionNotifiers: notifiers.Provision,
+		provisionPlugins:   plugins.Provision,
 	}
 }
 
 // Used for testing purposes
 func newProvisioningServiceImpl(
-	newDashboardProvisioner dashboards.DashboardProvisionerFactory,
 	provisionNotifiers func(string) error,
 	provisionPlugins func(string, plugifaces.Manager) error,
 ) *provisioningServiceImpl {
 	return &provisioningServiceImpl{
-		log:                     log.New("provisioning"),
-		newDashboardProvisioner: newDashboardProvisioner,
-		provisionNotifiers:      provisionNotifiers,
-		provisionPlugins:        provisionPlugins,
+		log:                log.New("provisioning"),
+		provisionNotifiers: provisionNotifiers,
+		provisionPlugins:   provisionPlugins,
 	}
 }
 
 type provisioningServiceImpl struct {
-	Cfg                     *setting.Cfg                       `inject:""`
-	SQLStore                *sqlstore.SQLStore                 `inject:""`
-	PluginManager           plugifaces.Manager                 `inject:""`
-	DatasrcProvisioner      *datasources.DatasourceProvisioner `inject:""`
-	log                     log.Logger
-	pollingCtxCancel        context.CancelFunc
-	newDashboardProvisioner dashboards.DashboardProvisionerFactory
-	dashboardProvisioner    dashboards.DashboardProvisioner
-	provisionNotifiers      func(string) error
-	provisionPlugins        func(string, plugifaces.Manager) error
-	mutex                   sync.Mutex
+	Cfg                 *setting.Cfg                       `inject:""`
+	SQLStore            *sqlstore.SQLStore                 `inject:""`
+	PluginManager       plugifaces.Manager                 `inject:""`
+	DatasrcProvisioner  *datasources.DatasourceProvisioner `inject:""`
+	DiskDashProvisioner *diskDashProvisioning.Provisioner  `inject:""`
+	VCSDashProvisioner  *vcsDashProvisioning.Provisioner   `inject:""`
+	dashProvisioner     dashProvisioning.DashboardProvisioner
+	log                 log.Logger
+	pollingCtxCancel    context.CancelFunc
+	provisionNotifiers  func(string) error
+	provisionPlugins    func(string, plugifaces.Manager) error
+	mutex               sync.Mutex
 }
 
 func (ps *provisioningServiceImpl) Init() error {
+	ps.dashProvisioner = ps.VCSDashProvisioner
+	if ps.VCSDashProvisioner.IsDisabled() {
+		ps.dashProvisioner = ps.DiskDashProvisioner
+	}
 	return ps.RunInitProvisioners()
 }
 
@@ -111,7 +115,7 @@ func (ps *provisioningServiceImpl) Run(ctx context.Context) error {
 		// non-deterministically take one of the route possibly going into one polling loop before exiting.
 		pollingContext, cancelFun := context.WithCancel(context.Background())
 		ps.pollingCtxCancel = cancelFun
-		ps.dashboardProvisioner.PollChanges(pollingContext)
+		ps.dashProvisioner.PollChanges(pollingContext)
 		ps.mutex.Unlock()
 
 		select {
@@ -144,34 +148,28 @@ func (ps *provisioningServiceImpl) ProvisionNotifications() error {
 }
 
 func (ps *provisioningServiceImpl) ProvisionDashboards() error {
-	dashboardPath := filepath.Join(ps.Cfg.ProvisioningPath, "dashboards")
-	dashProvisioner, err := ps.newDashboardProvisioner(dashboardPath, ps.SQLStore)
-	if err != nil {
-		return errutil.Wrap("Failed to create provisioner", err)
-	}
-
+	// TODO read configs when provisioning using the disk service.
 	ps.mutex.Lock()
 	defer ps.mutex.Unlock()
 
 	ps.cancelPolling()
-	dashProvisioner.CleanUpOrphanedDashboards()
+	ps.dashProvisioner.CleanUpOrphanedDashboards()
 
-	err = dashProvisioner.Provision()
+	err := ps.dashProvisioner.Provision(context.TODO())
 	if err != nil {
 		// If we fail to provision with the new provisioner, the mutex will unlock and the polling will restart with the
 		// old provisioner as we did not switch them yet.
 		return errutil.Wrap("Failed to provision dashboards", err)
 	}
-	ps.dashboardProvisioner = dashProvisioner
 	return nil
 }
 
 func (ps *provisioningServiceImpl) GetDashboardProvisionerResolvedPath(name string) string {
-	return ps.dashboardProvisioner.GetProvisionerResolvedPath(name)
+	return ps.dashProvisioner.GetProvisionerResolvedPath(name)
 }
 
 func (ps *provisioningServiceImpl) GetAllowUIUpdatesFromConfig(name string) bool {
-	return ps.dashboardProvisioner.GetAllowUIUpdatesFromConfig(name)
+	return ps.dashProvisioner.GetAllowUIUpdatesFromConfig(name)
 }
 
 func (ps *provisioningServiceImpl) cancelPolling() {

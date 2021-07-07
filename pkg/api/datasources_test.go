@@ -101,13 +101,16 @@ func TestVCSStoreDataSource(t *testing.T) {
 	db := sqlstore.InitTestDB(t)
 	cfg := setting.NewCfg()
 	cfg.FeatureToggles = map[string]bool{"gitops": true}
-	calls := vcsmock.Calls{}
-	vcsMock := vcsmock.VCSServiceMock{Calls: &calls}
+	vcsMock := vcsmock.NewVCSMock()
+	vcsMock.IsDisabledFunc = func() bool {
+		return false
+	}
+
 	hs := &HTTPServer{
 		Bus:      bus.GetBus(),
 		Cfg:      cfg,
 		SQLStore: db,
-		VCS:      &vcsMock,
+		VCS:      vcsMock,
 	}
 	sc := setupScenarioContext(t, "/api/datasources")
 

@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	dboards "github.com/grafana/grafana/pkg/dashboards"
-	"github.com/grafana/grafana/pkg/services/provisioning/dashboards"
+	dashboardprovmock "github.com/grafana/grafana/pkg/services/provisioning/dashboards/mock"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,7 +47,7 @@ func TestProvisioningServiceImpl(t *testing.T) {
 		serviceTest.waitForPollChanges()
 		assert.Equal(t, 1, len(serviceTest.mock.Calls.PollChanges), "PollChanges should have been called")
 
-		serviceTest.mock.ProvisionFunc = func() error {
+		serviceTest.mock.ProvisionFunc = func(ctx context.Context) error {
 			return errors.New("Test error")
 		}
 		err = serviceTest.service.ProvisionDashboards()
@@ -75,7 +74,7 @@ type serviceTestStruct struct {
 	startService func()
 	cancel       func()
 
-	mock    *dashboards.ProvisionerMock
+	mock    *dashboardprovmock.ProvisionerMock
 	service *provisioningServiceImpl
 }
 
@@ -86,19 +85,18 @@ func setup() *serviceTestStruct {
 	pollChangesChannel := make(chan context.Context)
 	serviceStopped := make(chan interface{})
 
-	serviceTest.mock = dashboards.NewDashboardProvisionerMock()
+	serviceTest.mock = dashboardprovmock.NewDashboardProvisionerMock()
 	serviceTest.mock.PollChangesFunc = func(ctx context.Context) {
 		pollChangesChannel <- ctx
 	}
 
 	serviceTest.service = newProvisioningServiceImpl(
-		func(string, dboards.Store) (dashboards.DashboardProvisioner, error) {
-			return serviceTest.mock, nil
-		},
 		nil,
 		nil,
 	)
 	serviceTest.service.Cfg = setting.NewCfg()
+
+	serviceTest.service.dashProvisioner = serviceTest.mock
 
 	ctx, cancel := context.WithCancel(context.Background())
 	serviceTest.cancel = cancel
